@@ -1,0 +1,92 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {
+      fontFamily: {
+        'heading': ['Outfit', 'sans-serif'],
+        'body': ['DM Sans', 'sans-serif'],
+        'sans': ['DM Sans', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'sans-serif'],
+      },
+      colors: {
+        cream: '#f7e7be',
+        teal: {
+          DEFAULT: '#0c4c6d',
+          50: '#e6f0f4',
+          100: '#b3d4e0',
+          200: '#80b8cc',
+          300: '#4d9cb8',
+          400: '#1a80a4',
+          500: '#0c4c6d',
+          600: '#0a3d57',
+          700: '#082e41',
+          800: '#061f2b',
+          900: '#041015',
+        },
+        rose: {
+          DEFAULT: '#c700a1',
+          50: '#fce7f7',
+          100: '#f9cff0',
+          200: '#f3a0e1',
+          300: '#ed70d2',
+          400: '#e741c3',
+          500: '#c700a1',
+          600: '#9f0081',
+          700: '#770061',
+          800: '#500041',
+          900: '#280020',
+        },
+        'light-pink': {
+          DEFAULT: '#fdabf3',
+          50: '#fff5fe',
+          100: '#ffebfd',
+          200: '#fed7fb',
+          300: '#fec3f9',
+          400: '#fdaff5',
+          500: '#fdabf3',
+          600: '#ca89c2',
+          700: '#986792',
+          800: '#654461',
+          900: '#332231',
+        },
+        'checklist-accent': {
+          DEFAULT: '#DCF6C8',
+          50: '#f7fdf4',
+          100: '#effbe9',
+          200: '#dff7d3',
+          300: '#cff3bd',
+          400: '#bff0a7',
+          500: '#DCF6C8',
+          600: '#b0c5a0',
+          700: '#849478',
+          800: '#586350',
+          900: '#2c3228',
+        },
+      },
+      backdropBlur: {
+        xs: '2px',
+      },
+      borderRadius: {
+        'xl': '1rem',
+        '2xl': '1.25rem',
+        '3xl': '1.5rem',
+      },
+      boxShadow: {
+        'glass': '0 8px 32px 0 rgba(12, 76, 109, 0.08), 0 2px 8px 0 rgba(12, 76, 109, 0.04)',
+        'glass-elevated': '0 12px 40px 0 rgba(12, 76, 109, 0.12), 0 4px 12px 0 rgba(12, 76, 109, 0.06)',
+        'glass-subtle': '0 4px 20px 0 rgba(12, 76, 109, 0.06)',
+      },
+      spacing: {
+        '18': '4.5rem',
+        '22': '5.5rem',
+        '26': '6.5rem',
+        '30': '7.5rem',
+      },
+    },
+  },
+  plugins: [],
+}
+
