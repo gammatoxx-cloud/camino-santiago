@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -19,7 +19,7 @@ export function OnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [_error, setError] = useState<string | null>(null);
   const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
   const [formattedAddress, setFormattedAddress] = useState<string | null>(null);
   const [profilePicture, setProfilePicture] = useState<File | null>(null);
@@ -180,28 +180,30 @@ export function OnboardingPage() {
 
       // Create profile with geocoded coordinates
       // Use today's date as default start_date (not used for tracking anymore)
+      const profileData = {
+        id: user.id,
+        name: name.trim(),
+        location: location.trim() || formattedAddress || address.trim(),
+        address: formattedAddress || address.trim(),
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+        avatar_url: avatarUrl,
+        start_date: new Date().toISOString().split('T')[0], // Default to today (not used for tracking)
+      };
       const { error: profileError } = await supabase
         .from('profiles')
-        .insert({
-          id: user.id,
-          name: name.trim(),
-          location: location.trim() || formattedAddress || address.trim(),
-          address: formattedAddress || address.trim(),
-          latitude: coordinates.latitude,
-          longitude: coordinates.longitude,
-          avatar_url: avatarUrl,
-          start_date: new Date().toISOString().split('T')[0], // Default to today (not used for tracking)
-        });
+        .insert(profileData as any);
 
       if (profileError) throw profileError;
 
       // Create initial phase unlock for Phase 1
+      const unlockData = {
+        user_id: user.id,
+        phase_number: 1,
+      };
       const { error: unlockError } = await supabase
         .from('phase_unlocks')
-        .insert({
-          user_id: user.id,
-          phase_number: 1,
-        });
+        .insert(unlockData as any);
 
       if (unlockError) throw unlockError;
 
@@ -388,7 +390,7 @@ export function OnboardingPage() {
                 variant="primary"
                 size="lg"
                 className="flex-1"
-                disabled={!name.trim() || !address.trim() || geocoding || loading || !coordinates || geocodeError}
+                disabled={!name.trim() || !address.trim() || geocoding || loading || !coordinates || !!geocodeError}
               >
                 {loading ? 'Starting...' : 'Begin Training'}
               </Button>

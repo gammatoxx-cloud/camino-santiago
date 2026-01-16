@@ -52,8 +52,9 @@ export function SubscriptionPage() {
       setIsActive(active);
 
       if (profileData) {
+        const profile = profileData as { name: string };
         setProfile({
-          name: profileData.name,
+          name: profile.name,
           email: user.email || '',
         });
       }

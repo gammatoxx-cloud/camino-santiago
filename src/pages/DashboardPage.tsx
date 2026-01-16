@@ -8,7 +8,7 @@ import { SectionHeader } from '../components/ui/SectionHeader';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { getCurrentPhase, getWeekByNumber } from '../lib/trainingData';
-import { calculateTotalScore, calculateWalkPoints, calculatePhasePoints } from '../lib/scoringUtils';
+import { calculateTotalScore, calculateWalkPoints } from '../lib/scoringUtils';
 import { getUserTeam, getUserInvitations } from '../lib/teamMatching';
 import { videoSections, VideoSection } from '../lib/videoData';
 import { insignias } from '../lib/insigniasData';

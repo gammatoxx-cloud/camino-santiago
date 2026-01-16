@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { SectionHeader } from '../components/ui/SectionHeader';
 import { Card } from '../components/ui/Card';
 import { AlbumCard } from '../components/gallery/AlbumCard';
 import { getAlbumImageCounts } from '../lib/gallery';
 
 export function GalleryPage() {
-  const navigate = useNavigate();
   const [imageCounts, setImageCounts] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

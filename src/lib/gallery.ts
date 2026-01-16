@@ -173,7 +173,7 @@ export async function uploadGalleryImage(
       album_month: month,
       image_url: imageUrl,
       caption: caption || null,
-    })
+    } as any)
     .select(`
       *,
       user:profiles!gallery_images_user_id_fkey(id, name, avatar_url)
@@ -190,10 +190,15 @@ export async function uploadGalleryImage(
     throw new Error(`Error al guardar la imagen: ${error.message}`);
   }
 
+  if (!data) {
+    throw new Error('No se pudo guardar la imagen');
+  }
+
+  const result = data as any;
   return {
-    ...data,
-    user: data.user || null,
-  };
+    ...result,
+    user: result.user || null,
+  } as GalleryImage;
 }
 
 /**
@@ -222,14 +227,16 @@ export async function updateGalleryImageCaption(
     throw new Error('Imagen no encontrada');
   }
 
-  if (existingImage.user_id !== user.id) {
+  const image = existingImage as { user_id: string };
+  if (image.user_id !== user.id) {
     throw new Error('No tienes permiso para editar esta imagen');
   }
 
   // Update caption
-  const { data, error } = await supabase
-    .from('gallery_images')
-    .update({ caption: caption || null, updated_at: new Date().toISOString() })
+  const updateData = { caption: caption || null, updated_at: new Date().toISOString() };
+  const { data, error } = (supabase
+    .from('gallery_images') as any)
+    .update(updateData)
     .eq('id', imageId)
     .select(`
       *,
@@ -241,10 +248,15 @@ export async function updateGalleryImageCaption(
     throw new Error(`Error al actualizar la descripción: ${error.message}`);
   }
 
+  if (!data) {
+    throw new Error('No se pudo actualizar la imagen');
+  }
+
+  const result = data as any;
   return {
-    ...data,
-    user: data.user || null,
-  };
+    ...result,
+    user: result.user || null,
+  } as GalleryImage;
 }
 
 /**
@@ -260,16 +272,17 @@ export async function deleteGalleryImage(imageId: string): Promise<void> {
   }
 
   // First, get the image to check ownership and get the URL
-  const { data: image, error: fetchError } = await supabase
+  const { data: imageData, error: fetchError } = await supabase
     .from('gallery_images')
     .select('image_url, user_id')
     .eq('id', imageId)
     .single();
 
-  if (fetchError || !image) {
+  if (fetchError || !imageData) {
     throw new Error('Imagen no encontrada');
   }
 
+  const image = imageData as { image_url: string; user_id: string };
   if (image.user_id !== user.id) {
     throw new Error('No tienes permiso para eliminar esta imagen');
   }
@@ -341,7 +354,7 @@ export async function likeImage(imageId: string): Promise<void> {
   const { error } = await supabase.from('gallery_likes').insert({
     image_id: imageId,
     user_id: user.id,
-  });
+  } as any);
 
   if (error) {
     // If duplicate, ignore (user already liked)
@@ -419,7 +432,7 @@ export async function addComment(imageId: string, content: string): Promise<Gall
       image_id: imageId,
       user_id: user.id,
       content: content.trim(),
-    })
+    } as any)
     .select(`
       *,
       user:profiles!gallery_comments_user_id_fkey(id, name, avatar_url)
@@ -430,10 +443,15 @@ export async function addComment(imageId: string, content: string): Promise<Gall
     throw new Error(`Error al agregar comentario: ${error.message}`);
   }
 
+  if (!data) {
+    throw new Error('No se pudo agregar el comentario');
+  }
+
+  const result = data as any;
   return {
-    ...data,
-    user: data.user || null,
-  };
+    ...result,
+    user: result.user || null,
+  } as GalleryComment;
 }
 
 /**
@@ -471,6 +489,8 @@ export async function getAlbumImageCounts(): Promise<Record<number, number>> {
     throw new Error(`Error al cargar los conteos: ${error.message}`);
   }
 
+  const images = (data || []) as Array<{ album_month: number }>;
+
   // Initialize counts for all months (1-12)
   const counts: Record<number, number> = {};
   for (let i = 1; i <= 12; i++) {
@@ -478,9 +498,10 @@ export async function getAlbumImageCounts(): Promise<Record<number, number>> {
   }
 
   // Count images by month
-  if (data) {
-    for (const item of data) {
-      counts[item.album_month] = (counts[item.album_month] || 0) + 1;
+  for (const item of images) {
+    const month = item.album_month;
+    if (month >= 1 && month <= 12) {
+      counts[month] = (counts[month] || 0) + 1;
     }
   }
 

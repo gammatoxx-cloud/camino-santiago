@@ -342,6 +342,41 @@ export interface Database {
           created_at?: string
         }
       }
+      subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          status: 'pending' | 'active' | 'canceled' | 'expired' | 'past_due'
+          current_period_start: string
+          current_period_end: string
+          cancel_at_period_end: boolean
+          plan_id: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          status?: 'pending' | 'active' | 'canceled' | 'expired' | 'past_due'
+          current_period_start?: string
+          current_period_end?: string
+          cancel_at_period_end?: boolean
+          plan_id: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          status?: 'pending' | 'active' | 'canceled' | 'expired' | 'past_due'
+          current_period_start?: string
+          current_period_end?: string
+          cancel_at_period_end?: boolean
+          plan_id?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Functions: {
       find_users_within_radius: {

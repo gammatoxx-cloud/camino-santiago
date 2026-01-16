@@ -152,13 +152,11 @@ export function VideoLibraryPage() {
                   controls
                   config={{
                     youtube: {
-                      playerVars: {
-                        modestbranding: 1,
-                        rel: 0,
-                        enablejsapi: 1,
-                      },
+                      modestbranding: 1,
+                      rel: 0,
+                      enablejsapi: 1,
                     },
-                  }}
+                  } as any}
                 />
               </div>
               <div className="p-5 md:p-7">

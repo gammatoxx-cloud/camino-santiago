@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { SectionHeader } from '../components/ui/SectionHeader';
 import { MagnoliasHikesAccordion } from '../components/magnolias-hikes/MagnoliasHikesAccordion';
-import { magnoliasHikes, getHikesByEtapa } from '../lib/magnoliasHikesData';
+import { getHikesByEtapa } from '../lib/magnoliasHikesData';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 

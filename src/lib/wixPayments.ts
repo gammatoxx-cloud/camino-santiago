@@ -198,14 +198,15 @@ export async function getSubscriptionStatus(): Promise<SubscriptionStatus | null
       return null;
     }
 
+    const subscription = data as any;
     return {
-      id: data.id,
-      status: data.status,
-      current_period_start: data.current_period_start,
-      current_period_end: data.current_period_end,
-      cancel_at_period_end: data.cancel_at_period_end,
-      plan_id: data.plan_id,
-    };
+      id: subscription.id,
+      status: subscription.status,
+      current_period_start: subscription.current_period_start,
+      current_period_end: subscription.current_period_end,
+      cancel_at_period_end: subscription.cancel_at_period_end,
+      plan_id: subscription.plan_id,
+    } as SubscriptionStatus;
   } catch (error) {
     console.error('Error getting subscription status:', error);
     return null;
@@ -233,7 +234,7 @@ export async function hasActiveSubscription(): Promise<boolean> {
     return false;
   }
 
-  if (subscription.cancel_at_period_end && subscription.canceled_at) {
+  if (subscription.cancel_at_period_end) {
     return false;
   }
 
