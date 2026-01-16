@@ -8,7 +8,6 @@ import type { Phase } from '../../types';
 interface DashboardTrainingCardProps {
   totalScore: number;
   walkPoints: number;
-  phasePoints: number;
   currentWeek: number;
   currentPhase: Phase | null;
   completedWalksThisWeek: number;
@@ -20,7 +19,6 @@ interface DashboardTrainingCardProps {
 export function DashboardTrainingCard({
   totalScore,
   walkPoints,
-  phasePoints,
   currentWeek,
   currentPhase,
   completedWalksThisWeek,

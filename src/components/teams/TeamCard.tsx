@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card } from '../ui/Card';
 import { TeamWithMembers } from '../../types';
 
@@ -12,7 +11,6 @@ interface TeamCardProps {
 
 export function TeamCard({ team, currentUserId, onJoin, onLeave, showActions = true }: TeamCardProps) {
   const isMember = team.members.some(m => m.user_id === currentUserId);
-  const isCreator = team.created_by === currentUserId;
   const isFull = team.member_count >= team.max_members;
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { SectionHeader } from '../components/ui/SectionHeader';
 import { BookAccordion } from '../components/resources/BookAccordion';
@@ -10,7 +10,6 @@ import type { BookCompletion } from '../types';
 export function RecommendedBooksPage() {
   const { user } = useAuth();
   const [bookCompletions, setBookCompletions] = useState<BookCompletion[]>([]);
-  const [loading, setLoading] = useState(true);
   const [togglingBookId, setTogglingBookId] = useState<string | null>(null);
 
   // Split books into sections
@@ -22,7 +21,6 @@ export function RecommendedBooksPage() {
   useEffect(() => {
     const loadBookCompletions = async () => {
       if (!user) {
-        setLoading(false);
         return;
       }
 
@@ -37,8 +35,6 @@ export function RecommendedBooksPage() {
         setBookCompletions(data || []);
       } catch (err: any) {
         console.error('Error loading book completions:', err);
-      } finally {
-        setLoading(false);
       }
     };
 

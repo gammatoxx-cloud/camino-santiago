@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
 import { Button } from './Button';
 import { Card } from './Card';

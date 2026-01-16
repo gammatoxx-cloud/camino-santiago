@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import ReactPlayer from 'react-player';
 import { SectionHeader } from '../components/ui/SectionHeader';
@@ -14,7 +14,6 @@ export function VideoLibraryPage() {
   const { user } = useAuth();
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [videoCompletions, setVideoCompletions] = useState<VideoCompletion[]>([]);
-  const [loading, setLoading] = useState(true);
   const [togglingVideoId, setTogglingVideoId] = useState<string | null>(null);
 
   const handlePlayVideo = (video: Video) => {
@@ -33,7 +32,6 @@ export function VideoLibraryPage() {
   useEffect(() => {
     const loadVideoCompletions = async () => {
       if (!user) {
-        setLoading(false);
         return;
       }
 
@@ -48,8 +46,6 @@ export function VideoLibraryPage() {
         setVideoCompletions(data || []);
       } catch (err: any) {
         console.error('Error loading video completions:', err);
-      } finally {
-        setLoading(false);
       }
     };
 

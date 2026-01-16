@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card } from '../ui/Card';
 
 // Simple function to convert markdown bold to HTML

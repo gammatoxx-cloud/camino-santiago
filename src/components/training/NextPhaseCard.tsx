@@ -1,4 +1,3 @@
-import React from 'react';
 import { StepCard } from '../ui/StepCard';
 import { getPhaseByNumber } from '../../lib/trainingData';
 

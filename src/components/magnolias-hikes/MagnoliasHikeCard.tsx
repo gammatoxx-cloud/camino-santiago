@@ -1,4 +1,3 @@
-import React from 'react';
 import type { MagnoliasHike } from '../../types';
 
 interface MagnoliasHikeCardProps {

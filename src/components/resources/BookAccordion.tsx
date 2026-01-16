@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card } from '../ui/Card';
 import { BookCard } from './BookCard';
 import type { Book } from '../../lib/booksData';

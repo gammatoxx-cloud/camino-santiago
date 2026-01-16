@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card } from '../ui/Card';
 import type { VideoInsignia } from '../../types';
 import { formatVideoRequirement } from '../../lib/videoInsigniasData';

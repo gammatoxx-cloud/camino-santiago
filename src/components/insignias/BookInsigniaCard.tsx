@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card } from '../ui/Card';
 import type { BookInsignia } from '../../types';
 import { formatBookRequirement } from '../../lib/bookInsigniasData';

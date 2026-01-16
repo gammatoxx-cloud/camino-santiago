@@ -1,4 +1,4 @@
-import { differenceInDays, addDays, startOfDay } from 'date-fns';
+import { addDays } from 'date-fns';
 
 /**
  * Calculate which week the user is currently in (1-52)
@@ -7,7 +7,7 @@ import { differenceInDays, addDays, startOfDay } from 'date-fns';
  * This function now always returns week 1.
  * Week progression is now managed through phase unlocks and completions.
  */
-export function calculateCurrentWeek(startDate: Date): number {
+export function calculateCurrentWeek(_startDate: Date): number {
   // Start date tracking disabled - always return week 1
   // Week progression is now based on phase unlocks and manual selection
   return 1;

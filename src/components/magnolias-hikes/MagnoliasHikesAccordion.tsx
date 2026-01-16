@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Card } from '../ui/Card';
 import { MagnoliasHikeCard } from './MagnoliasHikeCard';
 import { ProgressRing } from '../ui/ProgressRing';

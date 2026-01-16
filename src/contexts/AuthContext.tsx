@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import { signIn, signUp, signOut as authSignOut } from '../lib/auth';
@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         initialSessionHandled = true;
         setLoading(false);
       }
-    }).catch((err) => {
+    }).catch(() => {
       // Still set loading to false on error if this is the current effect
       if (currentEffectIdRef.current === effectId && !initialSessionHandled) {
         initialSessionHandled = true;

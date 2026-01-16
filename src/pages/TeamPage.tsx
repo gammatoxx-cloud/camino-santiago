@@ -255,8 +255,6 @@ export function TeamPage() {
       setError(null);
       await sendTeamInvitation(user.id, userTeam.id, userId);
       
-      // Refresh invitations to show the new one
-      const userInvitations = await getUserInvitations(userId);
       // Note: We can't see other users' invitations, but we can show a success message
       
       const invitedUserName = nearbyUsers.find(u => u.id === userId)?.name || 'este usuario';

@@ -1,7 +1,6 @@
-import React from 'react';
 import { StepCard } from '../ui/StepCard';
 import { ProgressBar } from '../ui/ProgressBar';
-import { getPhaseByNumber, getWeeksInPhase } from '../../lib/trainingData';
+import { getPhaseByNumber } from '../../lib/trainingData';
 import { Phase1TipsCards } from './Phase1TipsCards';
 import { Phase2TipsCards } from './Phase2TipsCards';
 import { Phase3TipsCards } from './Phase3TipsCards';
@@ -15,7 +14,6 @@ interface CurrentPhaseCardProps {
 
 export function CurrentPhaseCard({ phaseNumber, currentWeek }: CurrentPhaseCardProps) {
   const phase = getPhaseByNumber(phaseNumber);
-  const weeksInPhase = getWeeksInPhase(phaseNumber);
 
   if (!phase) {
     return null;

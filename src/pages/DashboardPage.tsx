@@ -263,7 +263,6 @@ export function DashboardPage() {
   const week = getWeekByNumber(currentWeek);
   const totalScore = calculateTotalScore(allCompletions, phaseUnlocks, trailCompletions, bookCompletions, magnoliasHikeCompletions);
   const walkPoints = calculateWalkPoints(allCompletions);
-  const phasePoints = calculatePhasePoints(phaseUnlocks);
   
   const completedWalksThisWeek = completions.length;
   const totalWalksThisWeek = week?.days.length || 0;
@@ -322,7 +321,6 @@ export function DashboardPage() {
             <DashboardTrainingCard
               totalScore={totalScore}
               walkPoints={walkPoints}
-              phasePoints={phasePoints}
               currentWeek={currentWeek}
               currentPhase={currentPhase}
               completedWalksThisWeek={completedWalksThisWeek}

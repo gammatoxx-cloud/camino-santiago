@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { fetchImageLikes, likeImage, unlikeImage } from '../../lib/gallery';
 import { useAuth } from '../../contexts/AuthContext';
 

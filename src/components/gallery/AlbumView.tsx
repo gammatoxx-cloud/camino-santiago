@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SectionHeader } from '../ui/SectionHeader';
 import { Button } from '../ui/Button';
@@ -6,7 +6,7 @@ import { Card } from '../ui/Card';
 import { ImageCard } from './ImageCard';
 import { ImageUploadModal } from './ImageUploadModal';
 import { ImageModal } from './ImageModal';
-import { fetchAlbumImages, uploadGalleryImage } from '../../lib/gallery';
+import { fetchAlbumImages } from '../../lib/gallery';
 import type { GalleryImage } from '../../lib/gallery';
 
 const monthNames = [
