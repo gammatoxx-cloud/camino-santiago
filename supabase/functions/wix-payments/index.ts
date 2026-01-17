@@ -87,132 +87,115 @@ Deno.serve(async (req: Request) => {
     const { action, userEmail, userName, userId } = requestBody;
 
     if (action === 'create_payment_link') {
-      // Use Pricing Plans Checkout API for subscriptions (not Payment Links API)
+      // Use Payment Links API with simple structure (no line items, just amount)
+      // This avoids the member authentication issues with Pricing Plans API
+      
       const appUrl = Deno.env.get('APP_URL') || 'http://localhost:5173';
       
-      // Step 1: Find or create a Wix member for this user
-      let wixMemberId: string | null = null;
-      
-      console.log('Starting member lookup/creation for:', { userEmail, userName, userId });
-      
-      if (!userEmail) {
-        console.error('No userEmail provided');
-        return new Response(
-          JSON.stringify({ 
-            error: 'User email is required',
-            details: 'userEmail must be provided in the request body',
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // First, try to find existing member by email
-      console.log('Querying for existing member with email:', userEmail);
-      const queryMemberResponse = await fetch(
-        `${WIX_API_BASE}/members/v1/members/query`,
+      // Get plan details to get the price
+      console.log('Fetching plan details for plan ID:', WIX_PLAN_ID);
+      const planResponse = await fetch(
+        `${WIX_API_BASE}/pricing-plans/v3/plans/${WIX_PLAN_ID}`,
         {
-          method: 'POST',
+          method: 'GET',
           headers: {
             'Authorization': WIX_API_KEY,
             'wix-site-id': WIX_SITE_ID,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            query: {
-              filter: {
-                loginEmail: { $eq: userEmail },
-              },
-              paging: { limit: 1 },
-            },
-          }),
         }
       );
 
-      const queryMemberStatus = queryMemberResponse.status;
-      console.log('Member query response status:', queryMemberStatus);
-
-      if (queryMemberResponse.ok) {
-        const memberQueryData = await queryMemberResponse.json();
-        console.log('Member query response data:', JSON.stringify(memberQueryData, null, 2));
-        if (memberQueryData.members && memberQueryData.members.length > 0) {
-          wixMemberId = memberQueryData.members[0].id;
-          console.log('Found existing Wix member with ID:', wixMemberId);
-        } else {
-          console.log('No existing member found, will create new one');
-        }
-      } else {
-        const queryMemberErrorText = await queryMemberResponse.text();
-        console.error('Error querying Wix member:', { status: queryMemberStatus, error: queryMemberErrorText });
-        // Continue to try creating a member
-      }
-
-      // If member doesn't exist, create one
-      if (!wixMemberId) {
-        console.log('Creating new Wix member with email:', userEmail);
-        const createMemberResponse = await fetch(
-          `${WIX_API_BASE}/members/v1/members`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': WIX_API_KEY,
-              'wix-site-id': WIX_SITE_ID,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              member: {
-                loginEmail: userEmail,
-                contactInfo: {
-                  firstName: userName?.split(' ')[0] || '',
-                  lastName: userName?.split(' ').slice(1).join(' ') || '',
-                },
-              },
-            }),
-          }
-        );
-
-        const createMemberStatus = createMemberResponse.status;
-        console.log('Member creation response status:', createMemberStatus);
-
-        if (createMemberResponse.ok) {
-          const memberData = await createMemberResponse.json();
-          console.log('Member creation response data:', JSON.stringify(memberData, null, 2));
-          wixMemberId = memberData.member?.id || null;
-          console.log('Created new Wix member with ID:', wixMemberId);
-        } else {
-          const createMemberErrorText = await createMemberResponse.text();
-          console.error('Error creating Wix member:', { status: createMemberStatus, error: createMemberErrorText });
-        }
-      }
-
-      console.log('Final member ID check:', { hasWixMemberId: !!wixMemberId, wixMemberId, hasUserEmail: !!userEmail, userEmail });
-
-      if (!wixMemberId) {
-        console.error('No Wix member ID available - cannot create order');
+      if (!planResponse.ok) {
+        const errorText = await planResponse.text();
+        console.error('Error fetching plan:', { status: planResponse.status, error: errorText });
         return new Response(
           JSON.stringify({ 
-            error: 'Failed to create or find Wix member',
-            details: 'A Wix member is required to create a subscription order. The API key may not have "Manage Members" permission, or there was an error creating the member.',
+            error: 'Failed to fetch plan details',
+            details: `Wix API returned ${planResponse.status}: ${errorText}`,
           }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // Step 2: Create an online order for the pricing plan with member ID
-      // When using API key (not member session), we need both onBehalf and buyer
-      console.log('Creating order with member ID:', wixMemberId);
-      const createOrderRequestBody = {
-        planId: WIX_PLAN_ID,
-        onBehalf: {
-          memberId: wixMemberId,
-          orderMethod: 1, // MOTO
+      const planData = await planResponse.json();
+      console.log('Plan data received:', JSON.stringify(planData, null, 2));
+      
+      // Extract price from plan (structure may vary)
+      // Ensure price is a valid decimal string (e.g., "20.00" not 20 or undefined)
+      let planPrice = planData.plan?.pricing?.price?.value || 
+                     planData.plan?.pricing?.recurring?.price?.value || 
+                     planData.plan?.pricing?.singlePaymentForDuration?.price?.value ||
+                     '20.00';
+      
+      // Ensure price is a string and has proper decimal format
+      if (typeof planPrice === 'number') {
+        planPrice = planPrice.toFixed(2);
+      } else if (typeof planPrice !== 'string') {
+        planPrice = '20.00';
+      }
+      
+      // Ensure it has at least one decimal place
+      if (!planPrice.includes('.')) {
+        planPrice = `${planPrice}.00`;
+      }
+      
+      const planCurrency = planData.plan?.pricing?.price?.currency || 
+                          planData.plan?.pricing?.recurring?.price?.currency ||
+                          planData.plan?.pricing?.singlePaymentForDuration?.price?.currency ||
+                          'USD';
+      const planName = planData.plan?.name || 'Camino Santiago Monthly Subscription';
+      
+      console.log('Using plan price:', { planPrice, planPriceType: typeof planPrice, planCurrency, planName });
+
+      // Ensure we have valid values
+      const finalPrice = String(planPrice || '20.00');
+      const finalQuantity = 1;
+      
+      console.log('Final values before creating request:', { finalPrice, finalPriceType: typeof finalPrice, finalQuantity, finalQuantityType: typeof finalQuantity });
+
+      // Create payment link with minimal line item
+      // When type is ECOM, ecomPaymentLink.lineItems is required with at least 1 item
+      const lineItem = {
+        type: 'CUSTOM',
+        custom_item: {
+          name: planName,
         },
-        buyer: {
-          memberId: wixMemberId,
+        options: {
+          customItem: {
+            price: finalPrice,
+            quantity: finalQuantity,
+          },
+        },
+      };
+      
+      console.log('Line item object before request:', JSON.stringify(lineItem, null, 2));
+      console.log('Line item options.customItem:', JSON.stringify(lineItem.options.customItem, null, 2));
+
+      const paymentLinkRequestBody = {
+        paymentLink: {
+          type: 'ECOM',
+          title: planName,
+          description: 'Monthly access to the Camino Santiago training program',
+          currency: planCurrency,
+          paymentsLimit: 1,
+          source: {
+            appId: '1380b703-ce81-ff05-f115-39571d94dfcd', // Wix eCommerce appDefId
+          },
+          ecomPaymentLink: {
+            lineItems: [lineItem],
+          },
+          callbacks: {
+            successUrl: `${appUrl}/subscription?success=true&userId=${userId}`,
+            errorUrl: `${appUrl}/subscription?error=true`,
+          },
         },
       };
 
-      const orderResponse = await fetch(
-        `${WIX_API_BASE}/pricing-plans/v2/checkout/orders/online`,
+      console.log('Creating payment link with request:', JSON.stringify(paymentLinkRequestBody, null, 2));
+
+      const paymentLinkResponse = await fetch(
+        `${WIX_API_BASE}/payment-links/v1/payment-links`,
         {
           method: 'POST',
           headers: {
@@ -220,92 +203,42 @@ Deno.serve(async (req: Request) => {
             'wix-site-id': WIX_SITE_ID,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(createOrderRequestBody),
+          body: JSON.stringify(paymentLinkRequestBody),
         }
       );
 
-      if (!orderResponse.ok) {
-        const errorText = await orderResponse.text();
-        console.error('Error creating order:', {
-          status: orderResponse.status,
-          statusText: orderResponse.statusText,
+      if (!paymentLinkResponse.ok) {
+        const errorText = await paymentLinkResponse.text();
+        console.error('Error creating payment link:', {
+          status: paymentLinkResponse.status,
+          statusText: paymentLinkResponse.statusText,
           error: errorText,
-          requestBody: createOrderRequestBody,
+          requestBody: paymentLinkRequestBody,
         });
         return new Response(
           JSON.stringify({ 
-            error: 'Failed to create subscription order',
-            details: `Wix API returned ${orderResponse.status}: ${errorText}`,
+            error: 'Failed to create payment link',
+            details: `Wix API returned ${paymentLinkResponse.status}: ${errorText}`,
           }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const orderData = await orderResponse.json();
-      const wixPayOrderId = orderData.wixPayOrderId;
-      const orderId = orderData.id;
+      const paymentLinkData = await paymentLinkResponse.json();
+      console.log('Payment link response:', JSON.stringify(paymentLinkData, null, 2));
       
-      console.log('Order created successfully:', { orderId, wixPayOrderId });
-
-      if (!wixPayOrderId) {
-        console.error('No wixPayOrderId in order response:', orderData);
-        return new Response(
-          JSON.stringify({ 
-            error: 'Failed to get payment order ID',
-            details: 'Order created but no payment order ID returned',
-          }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Step 3: Start payment using Wix Pay API to get checkout URL
-      const startPaymentRequestBody = {
-        orderId: wixPayOrderId,
-        redirectUrl: `${appUrl}/subscription?success=true&userId=${userId}`,
-        errorUrl: `${appUrl}/subscription?error=true`,
-      };
-
-      console.log('Starting payment with order ID:', wixPayOrderId);
-      const paymentResponse = await fetch(
-        `${WIX_API_BASE}/wix-payments/v1/payment-provider/start-payment`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': WIX_API_KEY,
-            'wix-site-id': WIX_SITE_ID,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(startPaymentRequestBody),
-        }
-      );
-
-      if (!paymentResponse.ok) {
-        const errorText = await paymentResponse.text();
-        console.error('Error starting payment:', {
-          status: paymentResponse.status,
-          statusText: paymentResponse.statusText,
-          error: errorText,
-        });
-        return new Response(
-          JSON.stringify({ 
-            error: 'Failed to start payment',
-            details: `Wix Pay API returned ${paymentResponse.status}: ${errorText}`,
-          }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const paymentData = await paymentResponse.json();
-      const checkoutUrl = paymentData.checkoutUrl || paymentData.url || '';
+      const paymentLink = paymentLinkData.paymentLink || paymentLinkData;
+      const paymentLinkUrl = paymentLink.url || paymentLink.urls?.primary || paymentLink.checkoutUrl || '';
+      const paymentLinkId = paymentLink.id || '';
       
-      console.log('Payment URL retrieved:', checkoutUrl);
+      console.log('Payment link created:', { id: paymentLinkId, url: paymentLinkUrl });
       
       // Store pending subscription in database
       const { error: dbError } = await supabaseClient
         .from('subscriptions')
         .upsert({
           user_id: userId,
-          wix_payment_link_id: orderId,
+          wix_payment_link_id: paymentLinkId,
           plan_id: WIX_PLAN_ID,
           status: 'pending',
           current_period_start: new Date().toISOString(),
@@ -320,8 +253,8 @@ Deno.serve(async (req: Request) => {
 
       return new Response(
         JSON.stringify({
-          paymentLinkUrl: checkoutUrl,
-          paymentLinkId: orderId,
+          paymentLinkUrl: paymentLinkUrl,
+          paymentLinkId: paymentLinkId,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

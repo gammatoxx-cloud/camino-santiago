@@ -22,9 +22,25 @@ const monthNames = [
   'Diciembre',
 ];
 
+const monthImagePaths = [
+  '/enero.png',
+  '/febrero.png',
+  '/marzo.png',
+  '/abril.png',
+  '/mayo.png',
+  '/junio.png',
+  '/julio.png',
+  '/agosto.png',
+  '/septiembre.png',
+  '/octubre.png',
+  '/noviembre.png',
+  '/diciembre.png',
+];
+
 export function AlbumCard({ month, imageCount, thumbnailUrl }: AlbumCardProps) {
   const navigate = useNavigate();
   const monthName = monthNames[month - 1];
+  const coverImagePath = monthImagePaths[month - 1];
 
   const handleClick = () => {
     navigate(`/gallery/${month}`);
@@ -35,18 +51,26 @@ export function AlbumCard({ month, imageCount, thumbnailUrl }: AlbumCardProps) {
       <div className="flex flex-col h-full">
         {/* Thumbnail */}
         <div className="relative w-full h-48 md:h-56 mb-4 rounded-2xl overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300">
-          {thumbnailUrl ? (
-            <img
-              src={thumbnailUrl}
-              alt={monthName}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-teal/20 to-teal/10">
-              <span className="text-6xl">📸</span>
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+          <img
+            src={coverImagePath}
+            alt={monthName}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              // Fallback to emoji if image fails to load
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              const parent = target.parentElement;
+              if (parent && !parent.querySelector('.fallback')) {
+                const fallback = document.createElement('div');
+                fallback.className = 'fallback w-full h-full flex items-center justify-center bg-gradient-to-br from-teal/20 to-teal/10';
+                const emoji = document.createElement('span');
+                emoji.className = 'text-6xl';
+                emoji.textContent = '📸';
+                fallback.appendChild(emoji);
+                parent.appendChild(fallback);
+              }
+            }}
+          />
         </div>
 
         {/* Month Name and Count */}

@@ -57,7 +57,7 @@ export function HomePage() {
             <div className="flex-1 w-full md:w-auto">
               <div className="relative rounded-3xl overflow-hidden shadow-2xl">
                 <img 
-                  src="/hiking1.png" 
+                  src="/camino_hero1.jpg" 
                   alt="Camino de Santiago" 
                   className="w-full h-auto object-cover"
                 />
