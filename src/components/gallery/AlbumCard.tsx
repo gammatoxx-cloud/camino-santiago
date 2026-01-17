@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 interface AlbumCardProps {
   month: number;
   imageCount: number;
-  thumbnailUrl?: string;
 }
 
 const monthNames = [
@@ -37,7 +36,7 @@ const monthImagePaths = [
   '/diciembre.png',
 ];
 
-export function AlbumCard({ month, imageCount, thumbnailUrl }: AlbumCardProps) {
+export function AlbumCard({ month, imageCount }: AlbumCardProps) {
   const navigate = useNavigate();
   const monthName = monthNames[month - 1];
   const coverImagePath = monthImagePaths[month - 1];
