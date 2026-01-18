@@ -35,8 +35,8 @@ export function AuthPage() {
   const handleSignUp = async (email: string, password: string) => {
     const result = await signUp(email, password);
     if (!result.error && result.data?.user) {
-      // New user - redirect to onboarding
-      navigate('/onboarding');
+      // New user - redirect to email verification page
+      navigate('/verify-email');
     }
     return result;
   };

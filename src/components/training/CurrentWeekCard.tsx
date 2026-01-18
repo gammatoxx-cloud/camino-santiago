@@ -7,12 +7,14 @@ interface CurrentWeekCardProps {
   weekNumber: number;
   completions: WalkCompletion[];
   onToggleCompletion: (day: string, distance: number, completed: boolean) => Promise<void>;
+  onWeekChange: (weekNumber: number) => void;
 }
 
 export function CurrentWeekCard({
   weekNumber,
   completions,
   onToggleCompletion,
+  onWeekChange,
 }: CurrentWeekCardProps) {
   const week = getWeekByNumber(weekNumber);
   const phase = getCurrentPhase(weekNumber);
@@ -149,6 +151,32 @@ export function CurrentWeekCard({
             );
           })}
         </div>
+      </div>
+
+      {/* Week Navigation Buttons */}
+      <div className="flex justify-between items-center gap-4 mt-8 pt-6 border-t border-gray-200">
+        <button
+          onClick={() => onWeekChange(Math.max(1, weekNumber - 1))}
+          disabled={weekNumber <= 1}
+          className={`flex-1 px-6 py-3 rounded-lg font-semibold text-sm md:text-base transition-all ${
+            weekNumber <= 1
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-teal text-white hover:bg-teal/90 active:scale-95'
+          }`}
+        >
+          ← Semana Anterior
+        </button>
+        <button
+          onClick={() => onWeekChange(Math.min(52, weekNumber + 1))}
+          disabled={weekNumber >= 52}
+          className={`flex-1 px-6 py-3 rounded-lg font-semibold text-sm md:text-base transition-all ${
+            weekNumber >= 52
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-teal text-white hover:bg-teal/90 active:scale-95'
+          }`}
+        >
+          Semana Siguiente →
+        </button>
       </div>
     </Card>
   );

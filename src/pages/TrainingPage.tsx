@@ -11,8 +11,6 @@ import { getCurrentPhase, checkPhaseCompletion } from '../lib/trainingData';
 import { calculateTotalScore, calculateWalkPoints } from '../lib/scoringUtils';
 import type { UserProfile, WalkCompletion, PhaseUnlock, PhaseCompletion, TrailCompletion, BookCompletion, MagnoliasHikeCompletion } from '../types';
 
-// TEMPORARY: Test mode - allows manual week selection for testing
-const TEST_MODE = true;
 
 export function TrainingPage() {
   const navigate = useNavigate();
@@ -28,8 +26,7 @@ export function TrainingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const hasNavigatedRef = useRef(false);
-  // TEMPORARY: Test mode - manual week selection
-  const [testWeek, setTestWeek] = useState(1);
+  const [currentWeekNumber, setCurrentWeekNumber] = useState(1);
 
   const loadData = useCallback(async () => {
     if (!user || hasNavigatedRef.current) return;
@@ -57,8 +54,8 @@ export function TrainingPage() {
 
       setProfile(profileData);
 
-      // Start date tracking disabled - use test week selector or default to week 1
-      const currentWeek = TEST_MODE ? testWeek : 1;
+      // Start date tracking disabled - use current week number or default to week 1
+      const currentWeek = currentWeekNumber;
 
       // Load completions for current week
       const { data: completionsData, error: completionsError } = await supabase
@@ -187,16 +184,16 @@ export function TrainingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]); // Only depend on user.id to prevent re-running when user object reference changes
 
-  // TEMPORARY: Reload completions when test week changes
+  // Reload completions when current week changes
   useEffect(() => {
-    if (TEST_MODE && user && profile) {
+    if (user && profile) {
       const reloadCompletions = async () => {
         try {
           const { data: completionsData, error: completionsError } = await supabase
             .from('walk_completions')
             .select('*')
             .eq('user_id', user.id)
-            .eq('week_number', testWeek)
+            .eq('week_number', currentWeekNumber)
             .order('day_of_week');
 
           if (completionsError) throw completionsError;
@@ -218,7 +215,7 @@ export function TrainingPage() {
       };
       reloadCompletions();
     }
-  }, [testWeek, user, profile]);
+  }, [currentWeekNumber, user, profile]);
 
   const handleToggleCompletion = async (
     day: string,
@@ -227,8 +224,8 @@ export function TrainingPage() {
   ) => {
     if (!user || !profile) return;
 
-    // Start date tracking disabled - use test week selector or default to week 1
-    const currentWeek = TEST_MODE ? testWeek : 1;
+    // Start date tracking disabled - use current week number
+    const currentWeek = currentWeekNumber;
 
     try {
       if (completed) {
@@ -410,13 +407,12 @@ export function TrainingPage() {
   }
 
   // Calculate values after early returns (start date tracking disabled)
-  const currentWeek = TEST_MODE ? testWeek : 1;
+  const currentWeek = currentWeekNumber;
   const currentPhase = getCurrentPhase(currentWeek);
   const isSpanishPhase = currentPhase?.number ? currentPhase.number <= 5 : false;
-  // TEMPORARY: Unlock all phases for testing
-  const maxUnlockedPhase = TEST_MODE ? 5 : (phaseUnlocks.length > 0
+  const maxUnlockedPhase = phaseUnlocks.length > 0
     ? Math.max(...phaseUnlocks.map((u) => u.phase_number))
-    : 1);
+    : 1;
 
   return (
     <div className="min-h-screen bg-cream pb-20 md:pb-6 pt-8 md:pt-12 overflow-x-hidden">
@@ -425,29 +421,6 @@ export function TrainingPage() {
         <h1 className="text-heading-1 text-teal mb-12 text-center">
           {isSpanishPhase ? 'Tu Viaje de Entrenamiento' : 'Your Training Journey'}
         </h1>
-
-        {/* TEMPORARY: Test mode week selector */}
-        {TEST_MODE && (
-          <div className="mb-8 p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
-            <p className="text-sm font-semibold text-yellow-800 mb-2">
-              🧪 TEST MODE: Week tracking disabled
-            </p>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Week to Test (1-52):
-            </label>
-            <input
-              type="number"
-              min="1"
-              max="52"
-              value={testWeek}
-              onChange={(e) => setTestWeek(Math.max(1, Math.min(52, parseInt(e.target.value) || 1)))}
-              className="w-full px-4 py-2 border-2 border-teal rounded-lg focus:outline-none focus:ring-2 focus:ring-teal"
-            />
-            <p className="text-xs text-gray-600 mt-2">
-              All phases are unlocked for testing. Current week: {currentWeek}
-            </p>
-          </div>
-        )}
 
         <div className="space-y-8">
           <ScoreCard
@@ -462,6 +435,7 @@ export function TrainingPage() {
             weekNumber={currentWeek}
             completions={completions}
             onToggleCompletion={handleToggleCompletion}
+            onWeekChange={setCurrentWeekNumber}
           />
 
           {currentPhase && (

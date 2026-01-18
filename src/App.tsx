@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AuthPage } from './pages/AuthPage';
+import { EmailVerificationPage } from './pages/EmailVerificationPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { TrainingPage } from './pages/TrainingPage';
 import { ProfilePage } from './pages/ProfilePage';
@@ -44,6 +45,7 @@ function AppContent() {
             } 
           />
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/verify-email" element={<EmailVerificationPage />} />
           <Route
             path="/onboarding"
             element={
