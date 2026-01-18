@@ -397,12 +397,12 @@ export function TrainingPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-cream px-4">
         <div className="text-center">
-          <p className="text-gray-700 mb-4">No profile found. Please complete onboarding.</p>
+          <p className="text-gray-700 mb-4">No se encontró el perfil. Por favor completa el registro inicial.</p>
           <button
             onClick={() => navigate('/onboarding')}
             className="px-6 py-3 bg-teal text-white rounded-lg font-semibold"
           >
-            Go to Onboarding
+            Ir al Registro Inicial
           </button>
         </div>
       </div>

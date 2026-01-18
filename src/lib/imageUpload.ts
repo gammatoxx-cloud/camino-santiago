@@ -12,14 +12,14 @@ export function validateImageFile(file: File): { valid: boolean; error?: string 
   if (!ALLOWED_TYPES.includes(file.type)) {
     return {
       valid: false,
-      error: 'Please upload a JPG, PNG, or WebP image file.',
+      error: 'Por favor sube un archivo de imagen JPG, PNG o WebP.',
     };
   }
 
   if (file.size > MAX_FILE_SIZE) {
     return {
       valid: false,
-      error: `File size must be less than ${MAX_FILE_SIZE / 1024 / 1024}MB.`,
+      error: `El tamaño del archivo debe ser menor a ${MAX_FILE_SIZE / 1024 / 1024}MB.`,
     };
   }
 
@@ -123,14 +123,14 @@ export async function uploadProfilePicture(userId: string, file: File): Promise<
     });
 
   if (error) {
-    throw new Error(`Failed to upload image: ${error.message}`);
+    throw new Error(`No se pudo subir la imagen: ${error.message}`);
   }
 
   // Get public URL
   const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(data.path);
 
   if (!urlData?.publicUrl) {
-    throw new Error('Failed to get public URL for uploaded image');
+    throw new Error('No se pudo obtener la URL pública de la imagen subida');
   }
 
   return urlData.publicUrl;

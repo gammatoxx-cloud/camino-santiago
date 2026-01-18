@@ -60,7 +60,7 @@ export function OnboardingPage() {
           setGeocodeError(null);
         }
       } catch (err: any) {
-        setGeocodeError(err.message || 'Failed to verify address');
+        setGeocodeError(err.message || 'No se pudo verificar la dirección');
         setCoordinates(null);
         setFormattedAddress(null);
       } finally {
@@ -94,7 +94,7 @@ export function OnboardingPage() {
 
     const validation = validateImageFile(file);
     if (!validation.valid) {
-      setPictureError(validation.error || 'Invalid file');
+      setPictureError(validation.error || 'Archivo inválido');
       setProfilePicture(null);
       setPicturePreview(null);
       return;
@@ -148,12 +148,12 @@ export function OnboardingPage() {
 
   const handleComplete = async () => {
     if (!user || !name.trim() || !address.trim()) {
-      setError('Please fill in all required fields');
+      setError('Por favor completa todos los campos requeridos');
       return;
     }
 
     if (!coordinates || geocodeError) {
-      setError('Please enter a valid address. Make sure the address is verified (check for green checkmark).');
+      setError('Por favor ingresa una dirección válida. Asegúrate de que la dirección esté verificada (busca la marca de verificación verde).');
       return;
     }
 
@@ -174,7 +174,7 @@ export function OnboardingPage() {
         } catch (err: any) {
           console.error('Failed to upload profile picture:', err);
           // Don't block onboarding if picture upload fails
-          setPictureError(err.message || 'Failed to upload picture');
+          setPictureError(err.message || 'No se pudo subir la imagen');
         }
       }
 
@@ -210,7 +210,7 @@ export function OnboardingPage() {
       // Redirect to training page
       navigate('/training');
     } catch (err: any) {
-      setError(err.message || 'Failed to save profile. Please try again.');
+      setError(err.message || 'No se pudo guardar el perfil. Por favor intenta de nuevo.');
       setLoading(false);
     }
   };
@@ -236,7 +236,7 @@ export function OnboardingPage() {
         <div className="mb-6">
           <div className="flex justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">
-              Step {step} of 2
+              Paso {step} de 2
             </span>
             <span className="text-sm font-medium text-teal">
               {Math.round((step / 2) * 100)}%
@@ -255,14 +255,14 @@ export function OnboardingPage() {
           <div className="text-center">
             <div className="text-6xl mb-6">🌸</div>
             <h2 className="text-3xl font-bold text-teal mb-4">
-              Welcome to Your Journey!
+              ¡Bienvenida a Tu Viaje!
             </h2>
             <p className="text-gray-700 mb-8 text-lg">
-              We're so excited to have you join us on this transformative 52-week
-              journey to the Camino de Santiago. Let's get started with a few quick questions.
+              Estamos muy emocionadas de que te unas a nosotras en este viaje transformador de 52 semanas
+              hacia el Camino de Santiago. Comencemos con unas preguntas rápidas.
             </p>
             <Button onClick={handleNext} variant="primary" size="lg" className="w-full">
-              Let's Begin
+              Comencemos
             </Button>
           </div>
         )}
@@ -271,12 +271,12 @@ export function OnboardingPage() {
         {step === 2 && (
           <div>
             <h2 className="text-3xl font-bold text-teal mb-6">
-              Tell Us About Yourself
+              Cuéntanos Sobre Ti
             </h2>
             <div className="space-y-4">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                  Your Name <span className="text-red-500">*</span>
+                  Tu Nombre <span className="text-red-500">*</span>
                 </label>
                 <input
                   id="name"
@@ -285,12 +285,12 @@ export function OnboardingPage() {
                   onChange={(e) => setName(e.target.value)}
                   required
                   className="w-full px-4 py-3 text-base rounded-lg border-2 border-gray-200 focus:border-teal focus:outline-none bg-white/80"
-                  placeholder="Enter your name"
+                  placeholder="Ingresa tu nombre"
                 />
               </div>
               <div>
                 <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
-                  Address <span className="text-red-500">*</span>
+                  Dirección <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -303,7 +303,7 @@ export function OnboardingPage() {
                     }}
                     required
                     className="w-full px-4 py-3 text-base rounded-lg border-2 border-gray-200 focus:border-teal focus:outline-none bg-white/80 pr-10"
-                    placeholder="Enter your full address (e.g., 123 Main St, San Diego, CA)"
+                    placeholder="Ingresa tu dirección completa (ej: Av. Principal 123, Ciudad de México, CDMX)"
                   />
                   {geocoding && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -323,16 +323,16 @@ export function OnboardingPage() {
                 )}
                 {formattedAddress && coordinates && !geocodeError && (
                   <p className="mt-1 text-sm text-green-600">
-                    ✓ Verified: {formattedAddress}
+                    ✓ Verificada: {formattedAddress}
                   </p>
                 )}
                 <p className="mt-1 text-xs text-gray-500">
-                  We need your address to match you with nearby teammates for training together.
+                  Necesitamos tu dirección para conectarte con compañeras cercanas para entrenar juntas.
                 </p>
               </div>
               <div>
                 <label htmlFor="profile-picture" className="block text-sm font-medium text-gray-700 mb-2">
-                  Profile Picture <span className="text-gray-400">(Optional)</span>
+                  Foto de Perfil <span className="text-gray-400">(Opcional)</span>
                 </label>
                 <div className="flex items-center gap-4">
                   {picturePreview ? (
@@ -348,7 +348,7 @@ export function OnboardingPage() {
                           variant="ghost"
                           size="sm"
                         >
-                          Remove
+                          Eliminar
                         </Button>
                       </div>
                     </>
@@ -361,7 +361,7 @@ export function OnboardingPage() {
                         <svg className="w-8 h-8 text-gray-400 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                         </svg>
-                        <span className="text-xs text-gray-500">Add Photo</span>
+                        <span className="text-xs text-gray-500">Agregar Foto</span>
                       </div>
                     </label>
                   )}
@@ -377,13 +377,13 @@ export function OnboardingPage() {
                   <p className="mt-1 text-sm text-red-600">{pictureError}</p>
                 )}
                 <p className="mt-1 text-xs text-gray-500">
-                  Upload a profile picture to help your teammates recognize you. (JPG, PNG, or WebP, max 5MB)
+                  Sube una foto de perfil para que tus compañeras te reconozcan. (JPG, PNG o WebP, máx. 5MB)
                 </p>
               </div>
             </div>
             <div className="flex gap-4 mt-6">
               <Button onClick={handleBack} variant="ghost" size="lg" className="flex-1">
-                Back
+                Atrás
               </Button>
               <Button
                 onClick={handleComplete}
@@ -392,7 +392,7 @@ export function OnboardingPage() {
                 className="flex-1"
                 disabled={!name.trim() || !address.trim() || geocoding || loading || !coordinates || !!geocodeError}
               >
-                {loading ? 'Starting...' : 'Begin Training'}
+                {loading ? 'Iniciando...' : 'Comenzar Entrenamiento'}
               </Button>
             </div>
           </div>

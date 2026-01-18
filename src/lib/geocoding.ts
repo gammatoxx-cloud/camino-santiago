@@ -48,7 +48,7 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult> {
         latitude: 0,
         longitude: 0,
         formattedAddress: address,
-        error: 'No results found for this address',
+        error: 'No se encontraron resultados para esta dirección',
       };
     }
 
@@ -67,7 +67,7 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult> {
       latitude: 0,
       longitude: 0,
       formattedAddress: address,
-      error: error.message || 'Failed to geocode address. Please check your connection and try again.',
+      error: error.message || 'No se pudo geocodificar la dirección. Por favor verifica tu conexión e intenta de nuevo.',
     };
   }
 }
