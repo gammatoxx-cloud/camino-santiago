@@ -12,7 +12,7 @@ interface TeamMemberManagerProps {
   onAddUser: (userId: string) => Promise<void>;
 }
 
-export function TeamMemberManager({ teamId, teamName, currentMembers, onClose, onAddUser }: TeamMemberManagerProps) {
+export function TeamMemberManager({ teamId: _teamId, teamName, currentMembers, onClose, onAddUser }: TeamMemberManagerProps) {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -65,11 +65,11 @@ export function TeamMemberManager({ teamId, teamName, currentMembers, onClose, o
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
-      <Card
-        variant="elevated"
-        className="max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+        <Card
+          variant="elevated"
+          className="max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-2xl font-bold text-teal">Agregar Usuario a Equipo</h3>
           <button
@@ -146,6 +146,7 @@ export function TeamMemberManager({ teamId, teamName, currentMembers, onClose, o
           </Button>
         </div>
       </Card>
+      </div>
     </div>
   );
 }

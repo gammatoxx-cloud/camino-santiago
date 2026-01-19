@@ -1,7 +1,6 @@
 import { supabase } from './supabase';
 import { calculateTotalScore } from './scoringUtils';
-import { getTeamTotalDistance } from './teamMatching';
-import type { UserProfile, WalkCompletion, PhaseUnlock, TrailCompletion, BookCompletion, MagnoliasHikeCompletion, Team, TeamMember, TeamWithMembers } from '../types';
+import type { UserProfile, WalkCompletion, PhaseUnlock, TrailCompletion, BookCompletion, MagnoliasHikeCompletion, Team, TeamMember } from '../types';
 
 /**
  * User with admin stats (email, points, km walked)
@@ -267,9 +266,6 @@ export async function getAllTeamsWithStats(): Promise<TeamWithAdminStats[]> {
           totalKm = walks.reduce((sum, walk) => sum + Number(walk.distance_km), 0);
         }
 
-        // Get team total distance (using existing function)
-        const teamDistance = await getTeamTotalDistance(team.id);
-
         return {
           ...team,
           members: membersWithProfiles,
@@ -304,6 +300,8 @@ export async function addUserToTeam(userId: string, teamId: string): Promise<voi
     if (teamError) throw teamError;
     if (!team) throw new Error('Team not found');
 
+    const teamData = team as { max_members: number };
+
     // Check current member count
     const { data: members, error: membersError } = await supabase
       .from('team_members')
@@ -312,7 +310,7 @@ export async function addUserToTeam(userId: string, teamId: string): Promise<voi
 
     if (membersError) throw membersError;
 
-    if ((members?.length || 0) >= team.max_members) {
+    if ((members?.length || 0) >= teamData.max_members) {
       throw new Error('Team is full');
     }
 
@@ -335,7 +333,7 @@ export async function addUserToTeam(userId: string, teamId: string): Promise<voi
         team_id: teamId,
         user_id: userId,
         role: 'member',
-      });
+      } as any);
 
     if (insertError) throw insertError;
   } catch (error: any) {
