@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { isAdmin } from '../../lib/admin';
 
 export function DesktopNav() {
   const location = useLocation();
@@ -15,6 +16,7 @@ export function DesktopNav() {
     { path: '/resources', label: 'Recursos' },
     { path: '/insignias', label: 'Insignias' },
     { path: '/profile', label: 'Perfil' },
+    ...(isAdmin(user) ? [{ path: '/admin', label: 'Admin' }] : []),
   ] : [
     { path: '/', label: 'Inicio' },
   ];

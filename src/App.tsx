@@ -17,7 +17,9 @@ import { AlbumView } from './components/gallery/AlbumView';
 import { MagnoliasHikesPage } from './pages/MagnoliasHikesPage';
 import { InsigniasPage } from './pages/InsigniasPage';
 import { SubscriptionPage } from './pages/SubscriptionPage';
+import { AdminPage } from './pages/AdminPage';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
+import { AdminRoute } from './components/layout/AdminRoute';
 import { MobileNav } from './components/layout/MobileNav';
 import { DesktopNav } from './components/layout/DesktopNav';
 import { ScrollToTop } from './components/layout/ScrollToTop';
@@ -164,6 +166,14 @@ function AppContent() {
               <ProtectedRoute>
                 <SubscriptionPage />
               </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <AdminPage />
+              </AdminRoute>
             }
           />
           <Route path="*" element={<Navigate to="/" replace />} />

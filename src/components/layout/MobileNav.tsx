@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { isAdmin } from '../../lib/admin';
 
 export function MobileNav() {
   const location = useLocation();
@@ -23,6 +24,7 @@ export function MobileNav() {
     { path: '/resources', label: 'Recursos', icon: '📚' },
     { path: '/insignias', label: 'Insignias', icon: '🏅' },
     { path: '/profile', label: 'Perfil', icon: '👤' },
+    ...(user && isAdmin(user) ? [{ path: '/admin', label: 'Admin', icon: '⚙️' }] : []),
   ];
 
   // Only show mobile nav for logged-in users
