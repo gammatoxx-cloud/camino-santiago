@@ -50,7 +50,7 @@ export async function findNearbyUsers(
       }));
 
     // Get team information for nearby users
-    const nearbyUserIds = nearbyUsers.map(u => u.id);
+    const nearbyUserIds = nearbyUsers.map((u: NearbyUser) => u.id);
     
     if (nearbyUserIds.length === 0) {
       return nearbyUsers;
@@ -104,7 +104,7 @@ export async function findNearbyUsers(
       });
 
       // Add team information to nearby users
-      return nearbyUsers.map(user => {
+      return nearbyUsers.map((user: NearbyUser) => {
         const teamMember = teamMemberMap.get(user.id);
         if (teamMember) {
           const team = teamMap.get(teamMember.team_id);
@@ -151,7 +151,7 @@ export async function findNearbyUsers(
     });
 
     // Add team information to nearby users
-    return nearbyUsers.map(user => {
+    return nearbyUsers.map((user: NearbyUser) => {
       const teamMember = teamMemberMap.get(user.id);
       if (teamMember) {
         const team = teamMap.get(teamMember.team_id);
@@ -907,7 +907,7 @@ export async function getTeamJoinRequests(
     if (profilesError) throw profilesError;
 
     // Get team details
-    const { data: team, error: teamError } = await supabase
+    const { data: team } = await supabase
       .from('teams')
       .select('*')
       .eq('id', teamId)
@@ -985,18 +985,18 @@ export async function acceptJoinRequest(
 
     if ((members || []).length >= (team as Team).max_members) {
       // Update request status to declined since team is full
-      await supabase
+      await (supabase
         .from('team_join_requests')
-        .update({ status: 'declined', updated_at: new Date().toISOString() } as any)
-        .eq('id', requestId);
+        .update({ status: 'declined', updated_at: new Date().toISOString() })
+        .eq('id', requestId) as any);
       throw new Error('El equipo está lleno');
     }
 
     // Update request status to accepted
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase
       .from('team_join_requests')
-      .update({ status: 'accepted', updated_at: new Date().toISOString() } as any)
-      .eq('id', requestId);
+      .update({ status: 'accepted', updated_at: new Date().toISOString() })
+      .eq('id', requestId) as any);
 
     if (updateError) throw updateError;
 
@@ -1073,12 +1073,12 @@ export async function declineJoinRequest(
     }
 
     // Update request status to declined
-    const { error } = await supabase
+    const { error } = await (supabase
       .from('team_join_requests')
-      .update({ status: 'declined', updated_at: new Date().toISOString() } as any)
+      .update({ status: 'declined', updated_at: new Date().toISOString() })
       .eq('id', requestId)
       .eq('team_id', teamId)
-      .eq('status', 'pending');
+      .eq('status', 'pending') as any);
 
     if (error) throw error;
   } catch (error: any) {
