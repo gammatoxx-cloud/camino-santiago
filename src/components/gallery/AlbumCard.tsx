@@ -49,7 +49,7 @@ export function AlbumCard({ month, imageCount }: AlbumCardProps) {
     <Card variant="elevated" onClick={handleClick} className="cursor-pointer overflow-hidden">
       <div className="flex flex-col h-full">
         {/* Thumbnail */}
-        <div className="relative w-full h-48 md:h-56 mb-4 rounded-2xl overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300">
+        <div className="relative w-full aspect-square md:h-56 mb-4 rounded-2xl overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300">
           <img
             src={coverImagePath}
             alt={monthName}

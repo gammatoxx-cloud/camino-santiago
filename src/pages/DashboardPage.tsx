@@ -15,9 +15,6 @@ import { insignias } from '../lib/insigniasData';
 import { getHikesByEtapa } from '../lib/magnoliasHikesData';
 import type { UserProfile, WalkCompletion, PhaseUnlock, TeamWithMembers, TeamInvitationWithDetails, TrailCompletion, BookCompletion, MagnoliasHikeCompletion, Insignia } from '../types';
 
-// TEMPORARY: Test mode - allows manual week selection for testing
-const TEST_MODE = true;
-
 export function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -31,7 +28,6 @@ export function DashboardPage() {
   const [invitations, setInvitations] = useState<TeamInvitationWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [testWeek, setTestWeek] = useState(1);
   const [magnoliasHikeCompletions, setMagnoliasHikeCompletions] = useState<MagnoliasHikeCompletion[]>([]);
 
   const loadDashboardData = useCallback(async () => {
@@ -57,7 +53,7 @@ export function DashboardPage() {
       setProfile(profileData);
 
       // Calculate current week
-      const currentWeek = TEST_MODE ? testWeek : 1;
+      const currentWeek = 1;
 
       // Load completions for current week
       const { data: completionsData, error: completionsError } = await supabase
@@ -133,7 +129,7 @@ export function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, navigate, testWeek]);
+  }, [user, navigate]);
 
   // Calculate earned insignias based on completed hikes
   const earnedInsignias = useMemo(() => {
@@ -158,35 +154,6 @@ export function DashboardPage() {
     return earned;
   }, [magnoliasHikeCompletions]);
 
-  const reloadCompletions = useCallback(async () => {
-    if (!user) return;
-
-    try {
-      const { data: completionsData, error: completionsError } = await supabase
-        .from('walk_completions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('week_number', testWeek)
-        .order('day_of_week');
-
-      if (completionsError) throw completionsError;
-      setCompletions(completionsData || []);
-
-      // Also reload all completions for scoring
-      const { data: allCompletionsData, error: allCompletionsError } = await supabase
-        .from('walk_completions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('week_number', { ascending: true })
-        .order('day_of_week', { ascending: true });
-
-      if (allCompletionsError) throw allCompletionsError;
-      setAllCompletions(allCompletionsData || []);
-    } catch (err: any) {
-      console.error('Error reloading completions:', err);
-    }
-  }, [user, testWeek]);
-
   useEffect(() => {
     if (!user) {
       setLoading(false);
@@ -194,13 +161,6 @@ export function DashboardPage() {
     }
     loadDashboardData();
   }, [user, loadDashboardData]);
-
-  // TEMPORARY: Reload completions when test week changes
-  useEffect(() => {
-    if (TEST_MODE && user && profile) {
-      reloadCompletions();
-    }
-  }, [testWeek, user, profile, reloadCompletions]);
 
   // Get relevant video section based on current week
   const getRelevantVideoSection = (weekNumber: number): VideoSection | null => {
@@ -258,7 +218,7 @@ export function DashboardPage() {
   }
 
   // Calculate values
-  const currentWeek = TEST_MODE ? testWeek : 1;
+  const currentWeek = 1;
   const currentPhase = getCurrentPhase(currentWeek) || null;
   const week = getWeekByNumber(currentWeek);
   const totalScore = calculateTotalScore(allCompletions, phaseUnlocks, trailCompletions, bookCompletions, magnoliasHikeCompletions);
@@ -291,29 +251,6 @@ export function DashboardPage() {
             Bienvenida a Tu Tablero
           </h1>
         </div>
-
-        {/* TEMPORARY: Test mode week selector */}
-        {TEST_MODE && (
-          <div className="mb-8 p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
-            <p className="text-sm font-semibold text-yellow-800 mb-2">
-              🧪 MODO DE PRUEBA: Seguimiento de semanas deshabilitado
-            </p>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Seleccionar Semana para Probar (1-52):
-            </label>
-            <input
-              type="number"
-              min="1"
-              max="52"
-              value={testWeek}
-              onChange={(e) => setTestWeek(Math.max(1, Math.min(52, parseInt(e.target.value) || 1)))}
-              className="w-full px-4 py-2 border-2 border-teal rounded-lg focus:outline-none focus:ring-2 focus:ring-teal"
-            />
-            <p className="text-xs text-gray-600 mt-2">
-              Todas las fases están desbloqueadas para pruebas. Semana actual: {currentWeek}
-            </p>
-          </div>
-        )}
 
         <div className="space-y-8 md:space-y-10">
           {/* Training Progress Card */}

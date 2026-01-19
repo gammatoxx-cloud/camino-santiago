@@ -237,7 +237,7 @@ export function ImageModal({ image, isOpen, onClose, onDelete, onUpdate }: Image
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between p-4 border-b border-white/20 gap-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 border-b border-white/20 gap-4">
           <div className="flex items-center gap-2 flex-1">
             <LikeButton imageId={currentImage.id} />
             <Button
@@ -250,8 +250,8 @@ export function ImageModal({ image, isOpen, onClose, onDelete, onUpdate }: Image
               <span>Comentarios</span>
             </Button>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="md" onClick={handleDownload}>
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 w-full md:w-auto">
+            <Button variant="secondary" size="md" onClick={handleDownload} className="w-full md:w-auto">
               ⬇️ Descargar
             </Button>
             {isOwner && (
@@ -260,7 +260,7 @@ export function ImageModal({ image, isOpen, onClose, onDelete, onUpdate }: Image
                 size="md"
                 onClick={handleDelete}
                 disabled={deleting}
-                className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                className="text-red-600 hover:text-red-800 hover:bg-red-50 w-full md:w-auto"
               >
                 {deleting ? 'Eliminando...' : '🗑️ Eliminar'}
               </Button>

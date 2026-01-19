@@ -79,7 +79,7 @@ export function Phase3TipsCards() {
       <div className="md:hidden">
         <div 
           ref={scrollContainerRef}
-          className="flex gap-5 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4 pl-2 pr-2"
+          className="flex gap-5 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4 pl-4 pr-6"
         >
           {tips.map((tip, index) => (
             <div
