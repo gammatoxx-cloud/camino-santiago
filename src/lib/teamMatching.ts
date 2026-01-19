@@ -3,7 +3,7 @@
  */
 
 import { supabase } from './supabase';
-import type { NearbyUser, Team, TeamMember, TeamWithMembers, TeamInvitation, TeamInvitationWithDetails, UserProfile } from '../types';
+import type { NearbyUser, Team, TeamMember, TeamWithMembers, TeamInvitation, TeamInvitationWithDetails, TeamJoinRequest, TeamJoinRequestWithDetails, UserProfile } from '../types';
 
 /**
  * Find users within a specified radius (in miles) from a given location
@@ -29,7 +29,7 @@ export async function findNearbyUsers(
 
     if (error) throw error;
 
-    return (data || [])
+    const nearbyUsers = (data || [])
       .filter((user: any) => user.id !== userId) // Exclude current user
       .map((user: any) => ({
         id: user.id,
@@ -38,11 +38,135 @@ export async function findNearbyUsers(
         address: user.address,
         latitude: user.latitude,
         longitude: user.longitude,
+        avatar_url: null, // Not returned by function
         start_date: '', // Not returned by function
         created_at: '', // Not returned by function
         updated_at: '', // Not returned by function
         distance_miles: parseFloat(user.distance_miles.toFixed(2)),
+        team_id: undefined,
+        team_name: undefined,
+        is_team_leader: undefined,
+        team_max_members: undefined,
       }));
+
+    // Get team information for nearby users
+    const nearbyUserIds = nearbyUsers.map(u => u.id);
+    
+    if (nearbyUserIds.length === 0) {
+      return nearbyUsers;
+    }
+
+    // Get team memberships for nearby users using SECURITY DEFINER function to bypass RLS
+    const { data: teamMembersData, error: teamMembersError } = await (supabase.rpc as any)(
+      'get_user_team_memberships',
+      { user_ids: nearbyUserIds }
+    );
+
+    if (teamMembersError) {
+      console.error('Error fetching team members:', teamMembersError);
+      // Fall back to direct query if function doesn't exist yet
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('team_members')
+        .select('team_id, user_id, role')
+        .in('user_id', nearbyUserIds);
+      
+      if (fallbackError || !fallbackData) {
+        // Continue without team info if there's an error
+        return nearbyUsers;
+      }
+      
+      // Use fallback data
+      const teamMemberMap = new Map<string, { team_id: string; role: string }>();
+      (fallbackData || []).forEach((tm: any) => {
+        teamMemberMap.set(tm.user_id, { team_id: tm.team_id, role: tm.role });
+      });
+
+      const teamIds = [...new Set((fallbackData || []).map((tm: any) => tm.team_id))];
+
+      if (teamIds.length === 0) {
+        return nearbyUsers;
+      }
+
+      // Get team details
+      const { data: teamsData, error: teamsError } = await supabase
+        .from('teams')
+        .select('id, name, max_members')
+        .in('id', teamIds);
+
+      if (teamsError) {
+        console.error('Error fetching teams:', teamsError);
+        return nearbyUsers;
+      }
+
+      const teamMap = new Map<string, { name: string | null; max_members: number }>();
+      (teamsData || []).forEach((team: any) => {
+        teamMap.set(team.id, { name: team.name, max_members: team.max_members });
+      });
+
+      // Add team information to nearby users
+      return nearbyUsers.map(user => {
+        const teamMember = teamMemberMap.get(user.id);
+        if (teamMember) {
+          const team = teamMap.get(teamMember.team_id);
+          if (team) {
+            return {
+              ...user,
+              team_id: teamMember.team_id,
+              team_name: team.name || undefined,
+              is_team_leader: teamMember.role === 'leader',
+              team_max_members: team.max_members,
+            };
+          }
+        }
+        return user;
+      });
+    }
+
+    const teamMemberMap = new Map<string, { team_id: string; role: string }>();
+    (teamMembersData || []).forEach((tm: any) => {
+      teamMemberMap.set(tm.user_id, { team_id: tm.team_id, role: tm.role });
+    });
+
+    const teamIds = [...new Set((teamMembersData || []).map((tm: any) => tm.team_id))];
+
+    if (teamIds.length === 0) {
+      return nearbyUsers;
+    }
+
+    // Get team details
+    const { data: teamsData, error: teamsError } = await supabase
+      .from('teams')
+      .select('id, name, max_members')
+      .in('id', teamIds);
+
+    if (teamsError) {
+      console.error('Error fetching teams:', teamsError);
+      // Continue without team info if there's an error
+      return nearbyUsers;
+    }
+
+    const teamMap = new Map<string, { name: string | null; max_members: number }>();
+    (teamsData || []).forEach((team: any) => {
+      teamMap.set(team.id, { name: team.name, max_members: team.max_members });
+    });
+
+    // Add team information to nearby users
+    return nearbyUsers.map(user => {
+      const teamMember = teamMemberMap.get(user.id);
+      if (teamMember) {
+        const team = teamMap.get(teamMember.team_id);
+        if (team) {
+          return {
+            ...user,
+            team_id: teamMember.team_id,
+            team_name: team.name || undefined,
+            is_team_leader: teamMember.role === 'leader',
+            team_max_members: team.max_members,
+          };
+        }
+      }
+      return user;
+    });
   } catch (error: any) {
     console.error('Error finding nearby users:', error);
     throw new Error(error.message || 'Failed to find nearby users');
@@ -219,7 +343,7 @@ export async function getUserTeam(userId: string): Promise<TeamWithMembers | nul
 export async function createTeam(
   userId: string,
   teamName?: string,
-  maxMembers: number = 6
+  maxMembers: number = 14
 ): Promise<TeamWithMembers> {
   try {
     // Create the team
@@ -655,5 +779,352 @@ export async function getTeamTotalDistance(teamId: string): Promise<number> {
     console.error('Error getting team total distance:', error);
     // Return 0 on any error (graceful degradation)
     return 0;
+  }
+}
+
+/**
+ * Create a join request to join a team
+ * @param userId - The user requesting to join
+ * @param teamId - The team ID to request joining
+ * @returns Created join request
+ */
+export async function createJoinRequest(
+  userId: string,
+  teamId: string
+): Promise<TeamJoinRequest> {
+  try {
+    // Check if user is already a member
+    const { data: existingMember } = await supabase
+      .from('team_members')
+      .select('id')
+      .eq('team_id', teamId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existingMember) {
+      throw new Error('Ya eres miembro de este equipo');
+    }
+
+    // Check if there's already a pending request
+    const { data: existingRequest } = await supabase
+      .from('team_join_requests')
+      .select('id')
+      .eq('team_id', teamId)
+      .eq('requested_by', userId)
+      .eq('status', 'pending')
+      .maybeSingle();
+
+    if (existingRequest) {
+      throw new Error('Ya has enviado una solicitud a este equipo');
+    }
+
+    // Check if team has open spots
+    const { data: team, error: teamError } = await supabase
+      .from('teams')
+      .select('*')
+      .eq('id', teamId)
+      .single();
+
+    if (teamError) throw teamError;
+
+    const { data: members } = await supabase
+      .from('team_members')
+      .select('id')
+      .eq('team_id', teamId);
+
+    if ((members || []).length >= (team as Team).max_members) {
+      throw new Error('El equipo está lleno');
+    }
+
+    // Create join request
+    const { data: request, error: requestError } = await supabase
+      .from('team_join_requests')
+      .insert({
+        team_id: teamId,
+        requested_by: userId,
+        status: 'pending',
+      } as any)
+      .select()
+      .single();
+
+    if (requestError) throw requestError;
+
+    return request as TeamJoinRequest;
+  } catch (error: any) {
+    console.error('Error creating join request:', error);
+    throw new Error(error.message || 'Error al crear la solicitud de unión');
+  }
+}
+
+/**
+ * Get join requests for a team (team leaders only)
+ * @param teamId - The team ID
+ * @param leaderUserId - The team leader's user ID
+ * @returns Array of join requests with requester details
+ */
+export async function getTeamJoinRequests(
+  teamId: string,
+  leaderUserId: string
+): Promise<TeamJoinRequestWithDetails[]> {
+  try {
+    // Verify user is team leader
+    const { data: leaderMember, error: memberError } = await supabase
+      .from('team_members')
+      .select('role')
+      .eq('team_id', teamId)
+      .eq('user_id', leaderUserId)
+      .eq('role', 'leader')
+      .maybeSingle();
+
+    if (memberError) throw memberError;
+    if (!leaderMember) {
+      throw new Error('Solo los líderes del equipo pueden ver las solicitudes');
+    }
+
+    // Get pending join requests
+    const { data: requests, error: requestsError } = await supabase
+      .from('team_join_requests')
+      .select('*')
+      .eq('team_id', teamId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+
+    if (requestsError) throw requestsError;
+
+    const typedRequests = (requests || []) as TeamJoinRequest[];
+
+    if (typedRequests.length === 0) {
+      return [];
+    }
+
+    // Get requester profiles
+    const requesterIds = [...new Set(typedRequests.map(req => req.requested_by))];
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('*')
+      .in('id', requesterIds);
+
+    if (profilesError) throw profilesError;
+
+    // Get team details
+    const { data: team, error: teamError } = await supabase
+      .from('teams')
+      .select('*')
+      .eq('id', teamId)
+      .single();
+
+    const profilesMap = new Map(((profiles || []) as UserProfile[]).map(p => [p.id, p]));
+
+    return typedRequests.map(req => ({
+      ...req,
+      requester: profilesMap.get(req.requested_by) as UserProfile | undefined,
+      team: team ? (team as Team) : undefined,
+    })) as TeamJoinRequestWithDetails[];
+  } catch (error: any) {
+    console.error('Error getting team join requests:', error);
+    throw new Error(error.message || 'Error al obtener las solicitudes de unión');
+  }
+}
+
+/**
+ * Accept a join request and add user to team
+ * @param teamId - The team ID
+ * @param requestId - The join request ID
+ * @param leaderUserId - The team leader's user ID
+ * @returns Updated team with members
+ */
+export async function acceptJoinRequest(
+  teamId: string,
+  requestId: string,
+  leaderUserId: string
+): Promise<TeamWithMembers> {
+  try {
+    // Verify user is team leader
+    const { data: leaderMember, error: memberError } = await supabase
+      .from('team_members')
+      .select('role')
+      .eq('team_id', teamId)
+      .eq('user_id', leaderUserId)
+      .eq('role', 'leader')
+      .maybeSingle();
+
+    if (memberError) throw memberError;
+    if (!leaderMember) {
+      throw new Error('Solo los líderes del equipo pueden aceptar solicitudes');
+    }
+
+    // Get the join request
+    const { data: request, error: requestError } = await supabase
+      .from('team_join_requests')
+      .select('*')
+      .eq('id', requestId)
+      .eq('team_id', teamId)
+      .eq('status', 'pending')
+      .single();
+
+    if (requestError) throw requestError;
+    if (!request) {
+      throw new Error('Solicitud no encontrada o ya procesada');
+    }
+
+    const typedRequest = request as TeamJoinRequest;
+
+    // Check if team still has space
+    const { data: team, error: teamError } = await supabase
+      .from('teams')
+      .select('*')
+      .eq('id', teamId)
+      .single();
+
+    if (teamError) throw teamError;
+
+    const { data: members } = await supabase
+      .from('team_members')
+      .select('id')
+      .eq('team_id', teamId);
+
+    if ((members || []).length >= (team as Team).max_members) {
+      // Update request status to declined since team is full
+      await supabase
+        .from('team_join_requests')
+        .update({ status: 'declined', updated_at: new Date().toISOString() } as any)
+        .eq('id', requestId);
+      throw new Error('El equipo está lleno');
+    }
+
+    // Update request status to accepted
+    const { error: updateError } = await supabase
+      .from('team_join_requests')
+      .update({ status: 'accepted', updated_at: new Date().toISOString() } as any)
+      .eq('id', requestId);
+
+    if (updateError) throw updateError;
+
+    // Add user to team (reuse the team query we already have)
+    const { error: joinError } = await supabase
+      .from('team_members')
+      .insert({
+        team_id: teamId,
+        user_id: typedRequest.requested_by,
+        role: 'member',
+      } as any);
+
+    if (joinError) throw joinError;
+
+    // Get updated team with all members using the teamId we already have
+    // Get all team members
+    const { data: allMembers, error: allMembersError } = await supabase
+      .from('team_members')
+      .select('*')
+      .eq('team_id', teamId);
+
+    if (allMembersError) throw allMembersError;
+
+    // Get profiles separately
+    const memberUserIds = ((allMembers || []) as TeamMember[]).map(m => m.user_id);
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('*')
+      .in('id', memberUserIds);
+
+    if (profilesError) throw profilesError;
+
+    // Create a map for quick profile lookup
+    const profilesMap = new Map(((profilesData || []) as UserProfile[]).map(p => [p.id, p]));
+
+    return {
+      ...(team as Team),
+      members: ((allMembers || []) as TeamMember[]).map(m => ({
+        ...m,
+        profile: profilesMap.get(m.user_id) as UserProfile | undefined,
+      })) as (TeamMember & { profile?: UserProfile })[],
+      member_count: (allMembers || []).length,
+    };
+  } catch (error: any) {
+    console.error('Error accepting join request:', error);
+    throw new Error(error.message || 'Error al aceptar la solicitud');
+  }
+}
+
+/**
+ * Decline a join request
+ * @param teamId - The team ID
+ * @param requestId - The join request ID
+ * @param leaderUserId - The team leader's user ID
+ */
+export async function declineJoinRequest(
+  teamId: string,
+  requestId: string,
+  leaderUserId: string
+): Promise<void> {
+  try {
+    // Verify user is team leader
+    const { data: leaderMember, error: memberError } = await supabase
+      .from('team_members')
+      .select('role')
+      .eq('team_id', teamId)
+      .eq('user_id', leaderUserId)
+      .eq('role', 'leader')
+      .maybeSingle();
+
+    if (memberError) throw memberError;
+    if (!leaderMember) {
+      throw new Error('Solo los líderes del equipo pueden rechazar solicitudes');
+    }
+
+    // Update request status to declined
+    const { error } = await supabase
+      .from('team_join_requests')
+      .update({ status: 'declined', updated_at: new Date().toISOString() } as any)
+      .eq('id', requestId)
+      .eq('team_id', teamId)
+      .eq('status', 'pending');
+
+    if (error) throw error;
+  } catch (error: any) {
+    console.error('Error declining join request:', error);
+    throw new Error(error.message || 'Error al rechazar la solicitud');
+  }
+}
+
+/**
+ * Get join requests sent by a user
+ * @param userId - The user's ID
+ * @returns Array of join requests with team details
+ */
+export async function getUserJoinRequests(userId: string): Promise<TeamJoinRequestWithDetails[]> {
+  try {
+    const { data: requests, error: requestsError } = await supabase
+      .from('team_join_requests')
+      .select('*')
+      .eq('requested_by', userId)
+      .order('created_at', { ascending: false });
+
+    if (requestsError) throw requestsError;
+
+    const typedRequests = (requests || []) as TeamJoinRequest[];
+
+    if (typedRequests.length === 0) {
+      return [];
+    }
+
+    // Get team details
+    const teamIds = [...new Set(typedRequests.map(req => req.team_id))];
+    const { data: teams, error: teamsError } = await supabase
+      .from('teams')
+      .select('*')
+      .in('id', teamIds);
+
+    if (teamsError) throw teamsError;
+
+    const teamsMap = new Map(((teams || []) as Team[]).map(t => [t.id, t]));
+
+    return typedRequests.map(req => ({
+      ...req,
+      team: teamsMap.get(req.team_id) as Team | undefined,
+    })) as TeamJoinRequestWithDetails[];
+  } catch (error: any) {
+    console.error('Error getting user join requests:', error);
+    throw new Error(error.message || 'Error al obtener las solicitudes');
   }
 }

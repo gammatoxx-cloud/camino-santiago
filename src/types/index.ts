@@ -84,6 +84,10 @@ export interface TeamWithMembers extends Team {
 
 export interface NearbyUser extends UserProfile {
   distance_miles: number;
+  team_id?: string;
+  team_name?: string;
+  is_team_leader?: boolean;
+  team_max_members?: number;
 }
 
 export interface TeamInvitation {
@@ -99,6 +103,20 @@ export interface TeamInvitation {
 export interface TeamInvitationWithDetails extends TeamInvitation {
   team?: Team;
   inviter?: UserProfile;
+}
+
+export interface TeamJoinRequest {
+  id: string;
+  team_id: string;
+  requested_by: string;
+  status: 'pending' | 'accepted' | 'declined';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamJoinRequestWithDetails extends TeamJoinRequest {
+  requester?: UserProfile;
+  team?: Team;
 }
 
 export interface TrailCompletion {

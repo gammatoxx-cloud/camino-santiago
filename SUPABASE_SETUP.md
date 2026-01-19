@@ -75,11 +75,35 @@ CREATE POLICY "Users can view team member profiles" ON profiles FOR SELECT
       AND tm2.user_id = profiles.id
     )
   );
+-- Team leaders can view profiles of users who have sent join requests to their teams
+CREATE POLICY "Team leaders can view join requester profiles" ON profiles FOR SELECT 
+  USING (
+    EXISTS (
+      SELECT 1 
+      FROM team_members tm
+      INNER JOIN team_join_requests tjr ON tm.team_id = tjr.team_id
+      WHERE tm.user_id = auth.uid()
+      AND tm.role = 'leader'
+      AND tjr.requested_by = profiles.id
+      AND tjr.status = 'pending'
+    )
+  );
 CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "Users can insert own profile" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Walk completions: users can manage their own completions
 CREATE POLICY "Users can view own completions" ON walk_completions FOR SELECT USING (auth.uid() = user_id);
+-- Team members can view walk completions of other team members (for team statistics)
+CREATE POLICY "Team members can view team completions" ON walk_completions FOR SELECT 
+  USING (
+    EXISTS (
+      SELECT 1 
+      FROM team_members tm1
+      INNER JOIN team_members tm2 ON tm1.team_id = tm2.team_id
+      WHERE tm1.user_id = auth.uid()
+      AND tm2.user_id = walk_completions.user_id
+    )
+  );
 CREATE POLICY "Users can insert own completions" ON walk_completions FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can delete own completions" ON walk_completions FOR DELETE USING (auth.uid() = user_id);
 
@@ -138,7 +162,7 @@ CREATE TABLE teams (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT,
   created_by UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
-  max_members INTEGER DEFAULT 6 NOT NULL,
+  max_members INTEGER DEFAULT 14 NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -165,6 +189,17 @@ CREATE TABLE team_invitations (
   UNIQUE(team_id, invited_user_id, status) -- One pending invitation per team per user
 );
 
+-- Team join requests table (users requesting to join teams)
+CREATE TABLE team_join_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_id UUID REFERENCES teams(id) ON DELETE CASCADE NOT NULL,
+  requested_by UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(team_id, requested_by, status) -- One pending request per team per user
+);
+
 -- Create spatial index on profiles for efficient distance queries
 CREATE INDEX idx_profiles_location ON profiles USING GIST (
   ST_MakePoint(longitude, latitude)
@@ -174,11 +209,14 @@ CREATE INDEX idx_profiles_location ON profiles USING GIST (
 CREATE INDEX idx_teams_created_by ON teams(created_by);
 CREATE INDEX idx_team_members_team_id ON team_members(team_id);
 CREATE INDEX idx_team_members_user_id ON team_members(user_id);
+CREATE INDEX idx_team_join_requests_team_id ON team_join_requests(team_id);
+CREATE INDEX idx_team_join_requests_requested_by ON team_join_requests(requested_by);
 
 -- Enable RLS on new tables
 ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE team_invitations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE team_join_requests ENABLE ROW LEVEL SECURITY;
 
 -- Helper functions with SECURITY DEFINER to bypass RLS and avoid recursion
 -- These functions run with the privileges of the function owner and can query
@@ -275,6 +313,27 @@ CREATE POLICY "Users can join teams" ON team_members FOR INSERT
     )
   );
 
+-- Team leaders can add members when accepting join requests
+-- This allows team leaders to add members when there's a pending or accepted join request from that user
+CREATE POLICY "Team leaders can add members from join requests" ON team_members FOR INSERT 
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM team_members tm
+      INNER JOIN team_join_requests tjr ON tm.team_id = tjr.team_id
+      WHERE tm.team_id = team_members.team_id
+      AND tm.user_id = auth.uid()
+      AND tm.role = 'leader'
+      AND tjr.requested_by = team_members.user_id
+      AND tjr.team_id = team_members.team_id
+      AND tjr.status IN ('pending', 'accepted')
+    ) AND
+    EXISTS (
+      SELECT 1 FROM teams t
+      WHERE t.id = team_id
+      AND get_team_member_count(t.id) < t.max_members::BIGINT
+    )
+  );
+
 -- Users can leave teams
 CREATE POLICY "Users can leave teams" ON team_members FOR DELETE 
   USING (auth.uid() = user_id);
@@ -308,6 +367,49 @@ CREATE POLICY "Users can create invitations" ON team_invitations FOR INSERT
 -- Invited users can update their invitations (accept/decline)
 CREATE POLICY "Users can update own invitations" ON team_invitations FOR UPDATE 
   USING (auth.uid() = invited_user_id);
+
+-- RLS Policies for team_join_requests
+-- Users can view requests they've sent
+CREATE POLICY "Users can view own join requests" ON team_join_requests FOR SELECT 
+  USING (auth.uid() = requested_by);
+
+-- Team leaders can view requests for their teams
+CREATE POLICY "Team leaders can view team join requests" ON team_join_requests FOR SELECT 
+  USING (
+    EXISTS (
+      SELECT 1 FROM team_members tm 
+      WHERE tm.team_id = team_join_requests.team_id 
+      AND tm.user_id = auth.uid()
+      AND tm.role = 'leader'
+    )
+  );
+
+-- Users can create join requests
+CREATE POLICY "Users can create join requests" ON team_join_requests FOR INSERT 
+  WITH CHECK (
+    auth.uid() = requested_by AND
+    NOT EXISTS (
+      SELECT 1 FROM team_members tm
+      WHERE tm.team_id = team_join_requests.team_id
+      AND tm.user_id = auth.uid()
+    ) AND
+    EXISTS (
+      SELECT 1 FROM teams t
+      WHERE t.id = team_join_requests.team_id
+      AND get_team_member_count(t.id) < t.max_members::BIGINT
+    )
+  );
+
+-- Team leaders can update join requests (accept/decline)
+CREATE POLICY "Team leaders can update join requests" ON team_join_requests FOR UPDATE 
+  USING (
+    EXISTS (
+      SELECT 1 FROM team_members tm 
+      WHERE tm.team_id = team_join_requests.team_id 
+      AND tm.user_id = auth.uid()
+      AND tm.role = 'leader'
+    )
+  );
 
 -- Function to find users within a radius (in meters, converts miles to meters)
 CREATE OR REPLACE FUNCTION find_users_within_radius(
@@ -369,6 +471,28 @@ BEGIN
   RETURN COALESCE(total_distance, 0);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get team membership info for users (bypasses RLS for discovery)
+-- This allows users to see which teams nearby users belong to and their roles
+CREATE OR REPLACE FUNCTION get_user_team_memberships(user_ids UUID[])
+RETURNS TABLE (
+  user_id UUID,
+  team_id UUID,
+  role TEXT
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    tm.user_id,
+    tm.team_id,
+    tm.role
+  FROM team_members tm
+  WHERE tm.user_id = ANY(user_ids);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant execute permission on the function
+GRANT EXECUTE ON FUNCTION get_user_team_memberships(UUID[]) TO authenticated;
 ```
 
 ## Environment Variables

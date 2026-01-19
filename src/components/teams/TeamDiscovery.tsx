@@ -11,7 +11,9 @@ interface TeamDiscoveryProps {
   onCreateTeam: () => void;
   onJoinTeam: (teamId: string) => void;
   onLeaveTeam: (teamId: string) => void;
+  onRequestJoin?: (teamId: string) => void;
   loading?: boolean;
+  pendingJoinRequestTeamIds?: string[]; // Team IDs the user has pending requests for
 }
 
 export function TeamDiscovery({
@@ -21,7 +23,9 @@ export function TeamDiscovery({
   onCreateTeam,
   onJoinTeam,
   onLeaveTeam,
+  onRequestJoin,
   loading = false,
+  pendingJoinRequestTeamIds = [],
 }: TeamDiscoveryProps) {
   const [showNearbyUsers, setShowNearbyUsers] = useState(true);
   const [showTeams, setShowTeams] = useState(true);
@@ -55,24 +59,59 @@ export function TeamDiscovery({
               </p>
             ) : (
               <div className="space-y-3">
-                {nearbyUsers.map((user) => (
-                  <div
-                    key={user.id}
-                    className="flex items-center justify-between p-3 bg-white/60 rounded-lg"
-                  >
-                    <div>
-                      <p className="font-medium text-gray-800">{user.name}</p>
-                      {user.location && (
-                        <p className="text-sm text-gray-600">{user.location}</p>
-                      )}
+                {nearbyUsers.map((user) => {
+                  const isTeamLeader = user.is_team_leader === true;
+                  const hasSpace = user.team_max_members && user.team_id
+                    ? !pendingJoinRequestTeamIds.includes(user.team_id)
+                    : false;
+                  const canRequestJoin = isTeamLeader && hasSpace && onRequestJoin && user.team_id;
+
+                  return (
+                    <div
+                      key={user.id}
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-white/60 rounded-lg"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium text-gray-800 truncate">{user.name}</p>
+                          {isTeamLeader && (
+                            <span className="px-2 py-0.5 bg-teal/10 text-teal rounded-full text-xs font-semibold whitespace-nowrap">
+                              👑 Líder
+                            </span>
+                          )}
+                        </div>
+                        {user.team_name && (
+                          <p className="text-sm text-teal font-medium mb-1 truncate">
+                            {user.team_name}
+                          </p>
+                        )}
+                        {user.location && (
+                          <p className="text-sm text-gray-600 truncate">{user.location}</p>
+                        )}
+                      </div>
+                      <div className="flex flex-col sm:items-end gap-2 flex-shrink-0">
+                        <p className="text-sm font-medium text-teal whitespace-nowrap">
+                          A {user.distance_miles.toFixed(1)} millas
+                        </p>
+                        {canRequestJoin && (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => onRequestJoin(user.team_id!)}
+                            className="min-h-[44px] w-full sm:w-auto"
+                          >
+                            Solicitar Unirse
+                          </Button>
+                        )}
+                        {isTeamLeader && user.team_id && pendingJoinRequestTeamIds.includes(user.team_id) && (
+                          <span className="text-xs text-gray-500 text-center sm:text-right">
+                            Solicitud enviada
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-teal">
-                        A {user.distance_miles.toFixed(1)} millas de distancia
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </>

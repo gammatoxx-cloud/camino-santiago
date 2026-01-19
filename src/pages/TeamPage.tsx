@@ -19,9 +19,15 @@ import {
   acceptInvitation,
   declineInvitation,
   getTeamTotalDistance,
+  createJoinRequest,
+  getTeamJoinRequests,
+  acceptJoinRequest,
+  declineJoinRequest,
+  getUserJoinRequests,
 } from '../lib/teamMatching';
 import { TeamStatsCard } from '../components/teams/TeamStatsCard';
-import type { NearbyUser, TeamWithMembers, TeamInvitationWithDetails, UserProfile } from '../types';
+import { TeamJoinRequestCard } from '../components/teams/TeamJoinRequestCard';
+import type { NearbyUser, TeamWithMembers, TeamInvitationWithDetails, TeamJoinRequestWithDetails, UserProfile } from '../types';
 
 export function TeamPage() {
   const navigate = useNavigate();
@@ -31,6 +37,8 @@ export function TeamPage() {
   const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>([]);
   const [availableTeams, setAvailableTeams] = useState<TeamWithMembers[]>([]);
   const [invitations, setInvitations] = useState<TeamInvitationWithDetails[]>([]);
+  const [joinRequests, setJoinRequests] = useState<TeamJoinRequestWithDetails[]>([]);
+  const [userJoinRequests, setUserJoinRequests] = useState<TeamJoinRequestWithDetails[]>([]);
   const [teamTotalDistance, setTeamTotalDistance] = useState<number | null>(null);
   const [loadingTeamDistance, setLoadingTeamDistance] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -38,6 +46,8 @@ export function TeamPage() {
   const [error, setError] = useState<string | null>(null);
   const [showCreateTeamModal, setShowCreateTeamModal] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
+  const [acceptingRequestId, setAcceptingRequestId] = useState<string | null>(null);
+  const [decliningRequestId, setDecliningRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -86,6 +96,19 @@ export function TeamPage() {
       // Load pending invitations
       const userInvitations = await getUserInvitations(user.id);
       setInvitations(userInvitations);
+
+      // Load user's join requests (to show pending status)
+      const userRequests = await getUserJoinRequests(user.id);
+      setUserJoinRequests(userRequests);
+
+      // Load team join requests if user is a team leader
+      if (team) {
+        const isLeader = team.members.some(m => m.user_id === user.id && m.role === 'leader');
+        if (isLeader) {
+          const teamRequests = await getTeamJoinRequests(team.id, user.id);
+          setJoinRequests(teamRequests);
+        }
+      }
 
       // Always load nearby users (to show them for inviting when in a team, or for discovery when not in a team)
       await discoverTeams(userProfile.latitude, userProfile.longitude);
@@ -300,6 +323,65 @@ export function TeamPage() {
     }
   };
 
+  const handleRequestJoin = async (teamId: string) => {
+    if (!user) return;
+
+    try {
+      setError(null);
+      await createJoinRequest(user.id, teamId);
+      
+      // Refresh user's join requests
+      const userRequests = await getUserJoinRequests(user.id);
+      setUserJoinRequests(userRequests);
+      
+      alert('Solicitud enviada. El líder del equipo recibirá una notificación.');
+    } catch (err: any) {
+      setError(err.message || 'Error al enviar la solicitud de unión.');
+    }
+  };
+
+  const handleAcceptJoinRequest = async (requestId: string) => {
+    if (!user || !userTeam) return;
+
+    try {
+      setError(null);
+      setAcceptingRequestId(requestId);
+      const updatedTeam = await acceptJoinRequest(userTeam.id, requestId, user.id);
+      setUserTeam(updatedTeam);
+      
+      // Refresh join requests
+      const teamRequests = await getTeamJoinRequests(userTeam.id, user.id);
+      setJoinRequests(teamRequests);
+      
+      // Refresh nearby users and available teams
+      if (profile?.latitude && profile?.longitude) {
+        await discoverTeams(profile.latitude, profile.longitude);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Error al aceptar la solicitud.');
+    } finally {
+      setAcceptingRequestId(null);
+    }
+  };
+
+  const handleDeclineJoinRequest = async (requestId: string) => {
+    if (!user || !userTeam) return;
+
+    try {
+      setError(null);
+      setDecliningRequestId(requestId);
+      await declineJoinRequest(userTeam.id, requestId, user.id);
+      
+      // Refresh join requests
+      const teamRequests = await getTeamJoinRequests(userTeam.id, user.id);
+      setJoinRequests(teamRequests);
+    } catch (err: any) {
+      setError(err.message || 'Error al rechazar la solicitud.');
+    } finally {
+      setDecliningRequestId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-cream px-4 py-8 md:px-8">
@@ -359,6 +441,32 @@ export function TeamPage() {
                     </div>
                   </div>
                 </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Join Requests Section - Show for team leaders */}
+        {userTeam && joinRequests.length > 0 && userTeam.members.some(m => m.user_id === user?.id && m.role === 'leader') && (
+          <Card variant="elevated" className="mb-6 bg-amber/10 border-amber/20">
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-2xl font-bold text-teal">Solicitudes de Unión</h2>
+              {joinRequests.length > 0 && (
+                <span className="px-2.5 py-1 bg-amber-500 text-white rounded-full text-sm font-bold min-w-[24px] text-center">
+                  {joinRequests.length}
+                </span>
+              )}
+            </div>
+            <div className="space-y-3">
+              {joinRequests.map((request) => (
+                <TeamJoinRequestCard
+                  key={request.id}
+                  request={request}
+                  onAccept={handleAcceptJoinRequest}
+                  onDecline={handleDeclineJoinRequest}
+                  accepting={acceptingRequestId === request.id}
+                  declining={decliningRequestId === request.id}
+                />
               ))}
             </div>
           </Card>
@@ -441,23 +549,36 @@ export function TeamPage() {
                       .map((nearbyUser) => (
                         <div
                           key={nearbyUser.id}
-                          className="flex items-center justify-between p-3 bg-white/60 rounded-lg"
+                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-white/60 rounded-lg"
                         >
-                          <div>
-                            <p className="font-medium text-gray-800">{nearbyUser.name}</p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium text-gray-800 truncate">{nearbyUser.name}</p>
+                              {nearbyUser.is_team_leader && (
+                                <span className="px-2 py-0.5 bg-teal/10 text-teal rounded-full text-xs font-semibold whitespace-nowrap">
+                                  👑 Líder
+                                </span>
+                              )}
+                            </div>
+                            {nearbyUser.team_name && (
+                              <p className="text-sm text-teal font-medium mb-1 truncate">
+                                {nearbyUser.team_name}
+                              </p>
+                            )}
                             {nearbyUser.location && (
-                              <p className="text-sm text-gray-600">{nearbyUser.location}</p>
+                              <p className="text-sm text-gray-600 truncate">{nearbyUser.location}</p>
                             )}
                           </div>
-                          <div className="flex items-center gap-3">
-                            <p className="text-sm font-medium text-teal">
-                              A {nearbyUser.distance_miles.toFixed(1)} millas de distancia
+                          <div className="flex flex-col sm:items-end gap-2 flex-shrink-0">
+                            <p className="text-sm font-medium text-teal whitespace-nowrap">
+                              A {nearbyUser.distance_miles.toFixed(1)} millas
                             </p>
                             {userTeam.created_by === user?.id && userTeam.member_count < userTeam.max_members && (
                               <Button
                                 variant="primary"
                                 size="sm"
                                 onClick={() => handleInviteUser(nearbyUser.id)}
+                                className="min-h-[44px] w-full sm:w-auto"
                               >
                                 Invitar
                               </Button>
@@ -489,7 +610,11 @@ export function TeamPage() {
                   onCreateTeam={() => setShowCreateTeamModal(true)}
                   onJoinTeam={handleJoinTeam}
                   onLeaveTeam={handleLeaveTeam}
+                  onRequestJoin={handleRequestJoin}
                   loading={discovering}
+                  pendingJoinRequestTeamIds={userJoinRequests
+                    .filter(req => req.status === 'pending')
+                    .map(req => req.team_id)}
                 />
               ) : (
                 <Card variant="elevated">
