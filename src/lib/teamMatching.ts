@@ -987,16 +987,16 @@ export async function acceptJoinRequest(
       // Update request status to declined since team is full
       await (supabase
         .from('team_join_requests')
-        .update({ status: 'declined', updated_at: new Date().toISOString() })
-        .eq('id', requestId) as any);
+        .update({ status: 'declined', updated_at: new Date().toISOString() } as never)
+        .eq('id', requestId));
       throw new Error('El equipo está lleno');
     }
 
     // Update request status to accepted
     const { error: updateError } = await (supabase
       .from('team_join_requests')
-      .update({ status: 'accepted', updated_at: new Date().toISOString() })
-      .eq('id', requestId) as any);
+      .update({ status: 'accepted', updated_at: new Date().toISOString() } as never)
+      .eq('id', requestId));
 
     if (updateError) throw updateError;
 
@@ -1075,10 +1075,10 @@ export async function declineJoinRequest(
     // Update request status to declined
     const { error } = await (supabase
       .from('team_join_requests')
-      .update({ status: 'declined', updated_at: new Date().toISOString() })
+      .update({ status: 'declined', updated_at: new Date().toISOString() } as never)
       .eq('id', requestId)
       .eq('team_id', teamId)
-      .eq('status', 'pending') as any);
+      .eq('status', 'pending'));
 
     if (error) throw error;
   } catch (error: any) {
