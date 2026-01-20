@@ -10,7 +10,6 @@ import { supabase } from '../lib/supabase';
 import {
   findNearbyUsers,
   findAvailableTeams,
-  getUserTeam,
   getUserTeams,
   createTeam,
   joinTeam,
@@ -222,7 +221,7 @@ export function TeamPage() {
 
     try {
       setError(null);
-      const team = await createTeam(user.id, newTeamName.trim() || undefined, 14);
+      await createTeam(user.id, newTeamName.trim() || undefined, 14);
       // Refresh all teams
       const teams = await getUserTeams(user.id);
       setUserTeams(teams);
