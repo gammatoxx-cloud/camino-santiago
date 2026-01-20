@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { AuthForm } from '../components/auth/AuthForm';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { getUserPlan } from '../lib/userPlans';
+import { isAdmin } from '../lib/admin';
 
 export function AuthPage() {
   const navigate = useNavigate();
@@ -21,12 +23,24 @@ export function AuthPage() {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, user_plan')
       .eq('id', targetUser.id)
       .maybeSingle();
 
     if (profile) {
-      navigate('/training');
+      // Check user's plan and admin status
+      const userPlan = (profile.user_plan as 'gratis' | 'basico' | 'completo') || 'gratis';
+      const userIsAdmin = isAdmin(targetUser);
+      
+      // Admin always goes to dashboard, basico users go to resources
+      if (userIsAdmin) {
+        navigate('/');
+      } else if (userPlan === 'basico') {
+        navigate('/resources');
+      } else {
+        // For gratis and completo users, go to training (or dashboard for completo)
+        navigate('/training');
+      }
     } else {
       navigate('/onboarding');
     }

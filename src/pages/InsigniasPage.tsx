@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { SectionHeader } from '../components/ui/SectionHeader';
+import { PlanRestrictedContent } from '../components/plan/PlanRestrictedContent';
 import { InsigniaCard } from '../components/insignias/InsigniaCard';
 import { TeamInsigniaCard } from '../components/insignias/TeamInsigniaCard';
 import { BookInsigniaCard } from '../components/insignias/BookInsigniaCard';
@@ -154,12 +155,13 @@ export function InsigniasPage() {
   }
 
   return (
-    <div className="min-h-screen bg-cream pb-20 md:pb-6 pt-8 md:pt-12 overflow-x-hidden">
-      <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-8">
-        <SectionHeader label="Logros" icon="🏅" />
-        <h1 className="text-heading-1 text-teal mb-6 md:mb-8 text-center">
-          Insignias
-        </h1>
+    <PlanRestrictedContent requiredPlan="basico" upgradeToPlan="basico">
+      <div className="min-h-screen bg-cream pb-20 md:pb-6 pt-8 md:pt-12 overflow-x-hidden">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-8">
+          <SectionHeader label="Logros" icon="🏅" />
+          <h1 className="text-heading-1 text-teal mb-6 md:mb-8 text-center">
+            Insignias
+          </h1>
 
         {/* Introduction Section */}
         <div className="text-gray-700 text-base md:text-lg leading-relaxed mb-12 md:mb-16 text-center max-w-3xl mx-auto">
@@ -262,7 +264,8 @@ export function InsigniasPage() {
             ))}
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </PlanRestrictedContent>
   );
 }

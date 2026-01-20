@@ -5,6 +5,7 @@ import { CurrentPhaseCard } from '../components/training/CurrentPhaseCard';
 import { NextPhaseCard } from '../components/training/NextPhaseCard';
 import { ScoreCard } from '../components/training/ScoreCard';
 import { SectionHeader } from '../components/ui/SectionHeader';
+import { PlanRestrictedContent } from '../components/plan/PlanRestrictedContent';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { getCurrentPhase, checkPhaseCompletion } from '../lib/trainingData';
@@ -415,45 +416,47 @@ export function TrainingPage() {
     : 1;
 
   return (
-    <div className="min-h-screen bg-cream pb-20 md:pb-6 pt-8 md:pt-12 overflow-x-hidden">
-      <div className="max-w-4xl mx-auto px-4 py-4 md:py-8">
-        <SectionHeader label={isSpanishPhase ? "Entrenamiento" : "Training"} icon="🚶" />
-        <h1 className="text-heading-1 text-teal mb-12 text-center">
-          {isSpanishPhase ? 'Tu Viaje de Entrenamiento' : 'Your Training Journey'}
-        </h1>
+    <PlanRestrictedContent requiredPlan="basico" upgradeToPlan="basico">
+      <div className="min-h-screen bg-cream pb-20 md:pb-6 pt-8 md:pt-12 overflow-x-hidden">
+        <div className="max-w-4xl mx-auto px-4 py-4 md:py-8">
+          <SectionHeader label={isSpanishPhase ? "Entrenamiento" : "Training"} icon="🚶" />
+          <h1 className="text-heading-1 text-teal mb-12 text-center">
+            {isSpanishPhase ? 'Tu Viaje de Entrenamiento' : 'Your Training Journey'}
+          </h1>
 
-        <div className="space-y-8">
-          <ScoreCard
-            totalScore={totalScore}
-            walkPoints={walkPoints}
-            phaseCount={phaseCount}
-            completedPhaseNumbers={phaseCompletions.map((c) => c.phase_number)}
-            isSpanishPhase={isSpanishPhase}
-          />
-
-          <CurrentWeekCard
-            weekNumber={currentWeek}
-            completions={completions}
-            onToggleCompletion={handleToggleCompletion}
-            onWeekChange={setCurrentWeekNumber}
-          />
-
-          {currentPhase && (
-            <CurrentPhaseCard
-              phaseNumber={currentPhase.number}
-              currentWeek={currentWeek}
+          <div className="space-y-8">
+            <ScoreCard
+              totalScore={totalScore}
+              walkPoints={walkPoints}
+              phaseCount={phaseCount}
+              completedPhaseNumbers={phaseCompletions.map((c) => c.phase_number)}
+              isSpanishPhase={isSpanishPhase}
             />
-          )}
 
-          {currentPhase && currentPhase.number < 5 && (
-            <NextPhaseCard
-              nextPhaseNumber={currentPhase.number + 1}
-              currentPhaseNumber={maxUnlockedPhase}
+            <CurrentWeekCard
+              weekNumber={currentWeek}
+              completions={completions}
+              onToggleCompletion={handleToggleCompletion}
+              onWeekChange={setCurrentWeekNumber}
             />
-          )}
+
+            {currentPhase && (
+              <CurrentPhaseCard
+                phaseNumber={currentPhase.number}
+                currentWeek={currentWeek}
+              />
+            )}
+
+            {currentPhase && currentPhase.number < 5 && (
+              <NextPhaseCard
+                nextPhaseNumber={currentPhase.number + 1}
+                currentPhaseNumber={maxUnlockedPhase}
+              />
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </PlanRestrictedContent>
   );
 }
 

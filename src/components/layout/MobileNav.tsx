@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useUserPlan } from '../../hooks/useUserPlan';
+import { canAccessPage } from '../../lib/userPlans';
 import { isAdmin } from '../../lib/admin';
 
 export function MobileNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { plan } = useUserPlan();
   const [isOpen, setIsOpen] = useState(false);
 
   // Close sidebar on mobile when route changes
@@ -34,6 +37,15 @@ export function MobileNav() {
 
   const handleNavClick = (path: string) => {
     setIsOpen(false);
+    
+    // Admin always has access, skip plan check
+    const isUserAdmin = user ? isAdmin(user) : false;
+    if (!isUserAdmin && plan && !canAccessPage(plan, path, user)) {
+      // Navigate to subscription page for upgrade
+      navigate('/subscription');
+      return;
+    }
+    
     navigate(path);
   };
 
@@ -110,6 +122,11 @@ export function MobileNav() {
           <div className="flex-1 px-4 py-6 flex flex-col gap-2 overflow-y-auto">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path;
+              // Admin always has access to all pages
+              const isUserAdmin = user ? isAdmin(user) : false;
+              const hasAccess = isUserAdmin || (plan ? canAccessPage(plan, item.path, user) : true);
+              const isRestricted = !hasAccess;
+              
               return (
                 <button
                   key={item.path}
@@ -117,11 +134,27 @@ export function MobileNav() {
                   className={`px-5 py-4 rounded-xl font-semibold transition-all duration-200 min-h-[56px] flex items-center gap-3 text-left ${
                     isActive
                       ? 'text-teal bg-teal/10 shadow-glass-subtle'
+                      : isRestricted
+                      ? 'text-gray-400 opacity-60'
                       : 'text-gray-700 hover:text-teal hover:bg-white/60'
                   }`}
+                  disabled={isRestricted}
                 >
                   <span className="text-2xl">{item.icon}</span>
-                  <span>{item.label}</span>
+                  <span className="flex-1">{item.label}</span>
+                  {isRestricted && (
+                    <svg
+                      className="w-5 h-5 text-gray-400"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  )}
                 </button>
               );
             })}

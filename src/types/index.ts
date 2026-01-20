@@ -1,3 +1,5 @@
+export type UserPlan = 'gratis' | 'basico' | 'completo';
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -7,6 +9,7 @@ export interface UserProfile {
   longitude: number | null;
   avatar_url: string | null;
   start_date: string; // ISO date string
+  user_plan?: UserPlan;
   created_at: string;
   updated_at: string;
 }

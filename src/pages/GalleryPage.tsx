@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { SectionHeader } from '../components/ui/SectionHeader';
+import { PlanRestrictedContent } from '../components/plan/PlanRestrictedContent';
 import { Card } from '../components/ui/Card';
 import { AlbumCard } from '../components/gallery/AlbumCard';
 import { getAlbumImageCounts } from '../lib/gallery';
@@ -41,36 +42,38 @@ export function GalleryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-cream px-4 py-8 md:px-8 pt-20 md:pt-12">
-      <div className="max-w-6xl mx-auto">
-        <SectionHeader label="Galería" icon="📸" />
-        <h1 className="text-heading-1 text-teal mb-14 md:mb-16 text-center">
-          Galería de Imágenes
-        </h1>
+    <PlanRestrictedContent requiredPlan="basico" upgradeToPlan="basico">
+      <div className="min-h-screen bg-cream px-4 py-8 md:px-8 pt-20 md:pt-12">
+        <div className="max-w-6xl mx-auto">
+          <SectionHeader label="Galería" icon="📸" />
+          <h1 className="text-heading-1 text-teal mb-14 md:mb-16 text-center">
+            Galería de Imágenes
+          </h1>
 
-        {error && (
-          <Card variant="elevated" className="mb-6 bg-red-50 border-red-200">
-            <p className="text-red-700">{error}</p>
-            <button
-              onClick={loadImageCounts}
-              className="mt-2 text-teal hover:text-teal-600 font-semibold"
-            >
-              Intentar de nuevo
-            </button>
-          </Card>
-        )}
+          {error && (
+            <Card variant="elevated" className="mb-6 bg-red-50 border-red-200">
+              <p className="text-red-700">{error}</p>
+              <button
+                onClick={loadImageCounts}
+                className="mt-2 text-teal hover:text-teal-600 font-semibold"
+              >
+                Intentar de nuevo
+              </button>
+            </Card>
+          )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-            <AlbumCard
-              key={month}
-              month={month}
-              imageCount={imageCounts[month] || 0}
-            />
-          ))}
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+              <AlbumCard
+                key={month}
+                month={month}
+                imageCount={imageCounts[month] || 0}
+              />
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+    </PlanRestrictedContent>
   );
 }
 

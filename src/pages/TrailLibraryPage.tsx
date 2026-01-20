@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { SectionHeader } from '../components/ui/SectionHeader';
+import { PlanRestrictedContent } from '../components/plan/PlanRestrictedContent';
 import { Accordion } from '../components/ui/Accordion';
 import { TrailCard } from '../components/trails/TrailCard';
 import { trails } from '../lib/trailData';
@@ -96,79 +97,81 @@ export function TrailLibraryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-cream pb-20 md:pb-6 pt-8 md:pt-12 overflow-x-hidden">
-      <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-8">
-        <SectionHeader label="Biblioteca de Senderos" icon="🏔️" />
-        <h1 className="text-heading-1 text-teal mb-14 md:mb-16 text-center">
-          Senderos para Caminar
-        </h1>
+    <PlanRestrictedContent requiredPlan="basico" upgradeToPlan="basico">
+      <div className="min-h-screen bg-cream pb-20 md:pb-6 pt-8 md:pt-12 overflow-x-hidden">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-8">
+          <SectionHeader label="Biblioteca de Senderos" icon="🏔️" />
+          <h1 className="text-heading-1 text-teal mb-14 md:mb-16 text-center">
+            Senderos para Caminar
+          </h1>
 
-        <div className="space-y-3 md:space-y-4">
-          {/* Fácil Section */}
-          <Accordion
-            title="Fácil"
-            icon="🟢"
-            count={groupedTrails.facil.length}
-            variant="facil"
-            defaultOpen={true}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
-              {groupedTrails.facil.map((trail, index) => (
-                <TrailCard
-                  key={trail.id}
-                  trail={trail}
-                  index={index}
-                  isCompleted={completedTrails.has(trail.id)}
-                  onToggleCompletion={handleToggleCompletion}
-                />
-              ))}
-            </div>
-          </Accordion>
+          <div className="space-y-3 md:space-y-4">
+            {/* Fácil Section */}
+            <Accordion
+              title="Fácil"
+              icon="🟢"
+              count={groupedTrails.facil.length}
+              variant="facil"
+              defaultOpen={true}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
+                {groupedTrails.facil.map((trail, index) => (
+                  <TrailCard
+                    key={trail.id}
+                    trail={trail}
+                    index={index}
+                    isCompleted={completedTrails.has(trail.id)}
+                    onToggleCompletion={handleToggleCompletion}
+                  />
+                ))}
+              </div>
+            </Accordion>
 
-          {/* Moderado Section */}
-          <Accordion
-            title="Moderado"
-            icon="🟡"
-            count={groupedTrails.moderado.length}
-            variant="moderado"
-            defaultOpen={false}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
-              {groupedTrails.moderado.map((trail, index) => (
-                <TrailCard
-                  key={trail.id}
-                  trail={trail}
-                  index={index}
-                  isCompleted={completedTrails.has(trail.id)}
-                  onToggleCompletion={handleToggleCompletion}
-                />
-              ))}
-            </div>
-          </Accordion>
+            {/* Moderado Section */}
+            <Accordion
+              title="Moderado"
+              icon="🟡"
+              count={groupedTrails.moderado.length}
+              variant="moderado"
+              defaultOpen={false}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
+                {groupedTrails.moderado.map((trail, index) => (
+                  <TrailCard
+                    key={trail.id}
+                    trail={trail}
+                    index={index}
+                    isCompleted={completedTrails.has(trail.id)}
+                    onToggleCompletion={handleToggleCompletion}
+                  />
+                ))}
+              </div>
+            </Accordion>
 
-          {/* Difícil Section */}
-          <Accordion
-            title="Difícil"
-            icon="🔴"
-            count={groupedTrails.dificil.length}
-            variant="dificil"
-            defaultOpen={false}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
-              {groupedTrails.dificil.map((trail, index) => (
-                <TrailCard
-                  key={trail.id}
-                  trail={trail}
-                  index={index}
-                  isCompleted={completedTrails.has(trail.id)}
-                  onToggleCompletion={handleToggleCompletion}
-                />
-              ))}
-            </div>
-          </Accordion>
+            {/* Difícil Section */}
+            <Accordion
+              title="Difícil"
+              icon="🔴"
+              count={groupedTrails.dificil.length}
+              variant="dificil"
+              defaultOpen={false}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
+                {groupedTrails.dificil.map((trail, index) => (
+                  <TrailCard
+                    key={trail.id}
+                    trail={trail}
+                    index={index}
+                    isCompleted={completedTrails.has(trail.id)}
+                    onToggleCompletion={handleToggleCompletion}
+                  />
+                ))}
+              </div>
+            </Accordion>
+          </div>
         </div>
       </div>
-    </div>
+    </PlanRestrictedContent>
   );
 }
 

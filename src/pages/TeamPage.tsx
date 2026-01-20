@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { PlanRestrictedContent } from '../components/plan/PlanRestrictedContent';
 import { TeamDiscovery } from '../components/teams/TeamDiscovery';
 import { TeamMemberList } from '../components/teams/TeamMemberList';
 import { useAuth } from '../contexts/AuthContext';
@@ -396,8 +397,9 @@ export function TeamPage() {
   }
 
   return (
-    <div className="min-h-screen bg-cream px-4 py-8 md:px-8">
-      <div className="max-w-4xl mx-auto">
+    <PlanRestrictedContent requiredPlan="basico" upgradeToPlan="basico">
+      <div className="min-h-screen bg-cream px-4 py-8 md:px-8">
+        <div className="max-w-4xl mx-auto">
         {error && (
           <Card variant="elevated" className="mb-6 bg-red-50 border-red-200">
             <p className="text-red-700">{error}</p>
@@ -674,8 +676,9 @@ export function TeamPage() {
             </Card>
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </PlanRestrictedContent>
   );
 }
 

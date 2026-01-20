@@ -1,14 +1,15 @@
 import { supabase } from './supabase';
 import { calculateTotalScore } from './scoringUtils';
-import type { UserProfile, WalkCompletion, PhaseUnlock, TrailCompletion, BookCompletion, MagnoliasHikeCompletion, Team, TeamMember } from '../types';
+import type { UserProfile, WalkCompletion, PhaseUnlock, TrailCompletion, BookCompletion, MagnoliasHikeCompletion, Team, TeamMember, UserPlan } from '../types';
 
 /**
- * User with admin stats (email, points, km walked)
+ * User with admin stats (email, points, km walked, plan)
  */
 export interface UserWithStats extends UserProfile {
   email: string;
   totalPoints: number;
   totalKm: number;
+  user_plan?: UserPlan;
 }
 
 /**
@@ -145,6 +146,7 @@ export async function getAllUsersWithStats(): Promise<UserWithStats[]> {
           email,
           totalPoints,
           totalKm: Math.round(totalKm * 10) / 10, // Round to 1 decimal
+          user_plan: (profile.user_plan as UserPlan) || 'gratis',
         };
       })
     );
@@ -393,5 +395,30 @@ export async function deleteTeam(teamId: string): Promise<void> {
   } catch (error: any) {
     console.error('Error deleting team:', error);
     throw new Error(error.message || 'Failed to delete team');
+  }
+}
+
+/**
+ * Update a user's plan (admin only)
+ * @param userId - The user ID to update
+ * @param plan - The new plan ('gratis', 'basico', or 'completo')
+ */
+export async function updateUserPlan(userId: string, plan: UserPlan): Promise<void> {
+  try {
+    // Validate plan
+    if (!['gratis', 'basico', 'completo'].includes(plan)) {
+      throw new Error('Invalid plan. Must be one of: gratis, basico, completo');
+    }
+
+    // Use admin function to update plan
+    const { error } = await (supabase.rpc as any)('admin_update_user_plan', {
+      user_id_param: userId,
+      plan_param: plan,
+    });
+
+    if (error) throw error;
+  } catch (error: any) {
+    console.error('Error updating user plan:', error);
+    throw new Error(error.message || 'Failed to update user plan');
   }
 }

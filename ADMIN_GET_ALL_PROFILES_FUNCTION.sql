@@ -12,6 +12,7 @@ RETURNS TABLE (
   longitude DECIMAL,
   avatar_url TEXT,
   start_date DATE,
+  user_plan TEXT,
   created_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ
 )
@@ -48,6 +49,7 @@ BEGIN
     profiles.longitude,
     profiles.avatar_url,
     profiles.start_date,
+    COALESCE(profiles.user_plan, 'gratis')::TEXT as user_plan,
     profiles.created_at,
     profiles.updated_at
   FROM profiles

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { SectionHeader } from '../components/ui/SectionHeader';
+import { PlanRestrictedContent } from '../components/plan/PlanRestrictedContent';
 import { MagnoliasHikesAccordion } from '../components/magnolias-hikes/MagnoliasHikesAccordion';
 import { getHikesByEtapa } from '../lib/magnoliasHikesData';
 import { useAuth } from '../contexts/AuthContext';
@@ -82,8 +83,9 @@ export function MagnoliasHikesPage() {
   const etapa5Hikes = getHikesByEtapa(5);
 
   return (
-    <div className="min-h-screen bg-cream pb-20 md:pb-6 pt-8 md:pt-12 overflow-x-hidden">
-      <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-8">
+    <PlanRestrictedContent requiredPlan="completo" upgradeToPlan="completo">
+      <div className="min-h-screen bg-cream pb-20 md:pb-6 pt-8 md:pt-12 overflow-x-hidden">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-8">
         <SectionHeader label="Entrenamiento Magnolias" icon="🚶" />
         <h1 className="text-heading-1 text-teal mb-6 md:mb-8 text-center">
           Caminatas Magnolias
@@ -156,7 +158,8 @@ export function MagnoliasHikesPage() {
             title="Etapa 5 - Afinación final"
           />
         </div>
+        </div>
       </div>
-    </div>
+    </PlanRestrictedContent>
   );
 }

@@ -119,7 +119,7 @@ export function AdminPage() {
         )}
 
         {/* Users Section */}
-        <UserList users={users} loading={loading} />
+        <UserList users={users} loading={loading} onPlanUpdate={handleRefresh} />
 
         {/* Teams Section */}
         <TeamList

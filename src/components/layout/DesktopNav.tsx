@@ -1,10 +1,14 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useUserPlan } from '../../hooks/useUserPlan';
+import { canAccessPage } from '../../lib/userPlans';
 import { isAdmin } from '../../lib/admin';
 
 export function DesktopNav() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
+  const { plan } = useUserPlan();
 
   const navItems = user ? [
     { path: '/', label: 'Tablero' },
@@ -20,6 +24,16 @@ export function DesktopNav() {
   ] : [
     { path: '/', label: 'Inicio' },
   ];
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
+    // Admin always has access, skip plan check
+    const isUserAdmin = user ? isAdmin(user) : false;
+    if (!isUserAdmin && plan && !canAccessPage(plan, path, user)) {
+      e.preventDefault();
+      navigate('/subscription');
+      return;
+    }
+  };
 
   // For logged-in users: show left sidebar
   if (user) {
@@ -37,17 +51,38 @@ export function DesktopNav() {
         <div className="flex-1 px-4 py-6 flex flex-col gap-2">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
+            // Admin always has access to all pages
+            const isUserAdmin = user ? isAdmin(user) : false;
+            const hasAccess = isUserAdmin || (plan ? canAccessPage(plan, item.path, user) : true);
+            const isRestricted = !hasAccess;
+            
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`px-5 py-3 rounded-xl font-semibold transition-all duration-200 min-h-[44px] flex items-center ${
+                onClick={(e) => handleNavClick(e, item.path)}
+                className={`px-5 py-3 rounded-xl font-semibold transition-all duration-200 min-h-[44px] flex items-center justify-between ${
                   isActive
                     ? 'text-teal bg-teal/10 shadow-glass-subtle'
+                    : isRestricted
+                    ? 'text-gray-400 opacity-60 cursor-not-allowed'
                     : 'text-gray-700 hover:text-teal hover:bg-white/60'
                 }`}
               >
-                {item.label}
+                <span>{item.label}</span>
+                {isRestricted && (
+                  <svg
+                    className="w-4 h-4 text-gray-400"
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                )}
               </Link>
             );
           })}
