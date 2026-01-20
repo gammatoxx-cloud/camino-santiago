@@ -281,29 +281,37 @@ export async function findAvailableTeams(
  */
 export async function getUserTeam(userId: string): Promise<TeamWithMembers | null> {
   try {
-    const { data: teamMember, error: memberError } = await supabase
+    // Get team memberships - handle case where user might have multiple (data inconsistency)
+    const { data: teamMembers, error: memberError } = await supabase
       .from('team_members')
       .select('team_id')
       .eq('user_id', userId)
-      .maybeSingle();
+      .limit(1); // Only get first one if multiple exist
 
     if (memberError) throw memberError;
-    if (!teamMember) return null;
+    if (!teamMembers || teamMembers.length === 0) return null;
 
-    // Get team details
+    const teamId = (teamMembers[0] as { team_id: string }).team_id;
+
+    // Get team details - use maybeSingle to handle case where team doesn't exist
     const { data: team, error: teamError } = await supabase
       .from('teams')
       .select('*')
-      .eq('id', (teamMember as { team_id: string }).team_id)
-      .single();
+      .eq('id', teamId)
+      .maybeSingle();
 
     if (teamError) throw teamError;
+    if (!team) {
+      // Team doesn't exist - data inconsistency, return null
+      console.warn(`Team ${teamId} does not exist but user ${userId} has membership record`);
+      return null;
+    }
 
     // Get all team members (without profiles expansion to avoid PostgREST issues)
     const { data: members, error: membersError } = await supabase
       .from('team_members')
       .select('*')
-      .eq('team_id', (teamMember as { team_id: string }).team_id);
+      .eq('team_id', teamId);
 
     if (membersError) throw membersError;
 
@@ -330,6 +338,47 @@ export async function getUserTeam(userId: string): Promise<TeamWithMembers | nul
   } catch (error: any) {
     console.error('Error getting user team:', error);
     throw new Error(error.message || 'Failed to get user team');
+  }
+}
+
+/**
+ * Get team members with profiles for a given team ID
+ * @param teamId - The team ID
+ * @returns Array of team members with profiles
+ */
+export async function getTeamMembersByTeamId(teamId: string): Promise<(TeamMember & { profile?: UserProfile })[]> {
+  try {
+    // Get all team members
+    const { data: members, error: membersError } = await supabase
+      .from('team_members')
+      .select('*')
+      .eq('team_id', teamId);
+
+    if (membersError) throw membersError;
+
+    if (!members || members.length === 0) {
+      return [];
+    }
+
+    // Get profiles separately
+    const memberUserIds = ((members || []) as TeamMember[]).map(m => m.user_id);
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('*')
+      .in('id', memberUserIds);
+
+    if (profilesError) throw profilesError;
+
+    // Create a map for quick profile lookup
+    const profilesMap = new Map(((profilesData || []) as UserProfile[]).map(p => [p.id, p]));
+
+    return (members || []).map(m => ({
+      ...(m as TeamMember),
+      profile: profilesMap.get((m as TeamMember).user_id) as UserProfile | undefined,
+    })) as (TeamMember & { profile?: UserProfile })[];
+  } catch (error: any) {
+    console.error('Error getting team members:', error);
+    throw new Error(error.message || 'Failed to get team members');
   }
 }
 

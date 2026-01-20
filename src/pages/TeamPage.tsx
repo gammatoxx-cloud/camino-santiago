@@ -25,10 +25,12 @@ import {
   acceptJoinRequest,
   declineJoinRequest,
   getUserJoinRequests,
+  getTeamMembersByTeamId,
 } from '../lib/teamMatching';
 import { TeamStatsCard } from '../components/teams/TeamStatsCard';
 import { TeamJoinRequestCard } from '../components/teams/TeamJoinRequestCard';
-import type { NearbyUser, TeamWithMembers, TeamInvitationWithDetails, TeamJoinRequestWithDetails, UserProfile } from '../types';
+import { Avatar } from '../components/ui/Avatar';
+import type { NearbyUser, TeamWithMembers, TeamInvitationWithDetails, TeamJoinRequestWithDetails, UserProfile, TeamMember } from '../types';
 
 export function TeamPage() {
   const navigate = useNavigate();
@@ -40,6 +42,7 @@ export function TeamPage() {
   const [invitations, setInvitations] = useState<TeamInvitationWithDetails[]>([]);
   const [joinRequests, setJoinRequests] = useState<TeamJoinRequestWithDetails[]>([]);
   const [userJoinRequests, setUserJoinRequests] = useState<TeamJoinRequestWithDetails[]>([]);
+  const [invitationTeamMembers, setInvitationTeamMembers] = useState<Map<string, (TeamMember & { profile?: UserProfile })[]>>(new Map());
   const [teamTotalDistance, setTeamTotalDistance] = useState<number | null>(null);
   const [loadingTeamDistance, setLoadingTeamDistance] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -97,6 +100,23 @@ export function TeamPage() {
       // Load pending invitations
       const userInvitations = await getUserInvitations(user.id);
       setInvitations(userInvitations);
+
+      // Load team members for each invitation
+      if (userInvitations.length > 0) {
+        const teamMembersMap = new Map<string, (TeamMember & { profile?: UserProfile })[]>();
+        await Promise.all(
+          userInvitations.map(async (invitation) => {
+            try {
+              const members = await getTeamMembersByTeamId(invitation.team_id);
+              teamMembersMap.set(invitation.team_id, members);
+            } catch (err) {
+              console.error(`Error loading team members for invitation ${invitation.id}:`, err);
+              // Continue even if one fails
+            }
+          })
+        );
+        setInvitationTeamMembers(teamMembersMap);
+      }
 
       // Load user's join requests (to show pending status)
       const userRequests = await getUserJoinRequests(user.id);
@@ -299,6 +319,24 @@ export function TeamPage() {
       // Refresh invitations
       const userInvitations = await getUserInvitations(user.id);
       setInvitations(userInvitations);
+
+      // Reload team members for remaining invitations
+      if (userInvitations.length > 0) {
+        const teamMembersMap = new Map<string, (TeamMember & { profile?: UserProfile })[]>();
+        await Promise.all(
+          userInvitations.map(async (invitation) => {
+            try {
+              const members = await getTeamMembersByTeamId(invitation.team_id);
+              teamMembersMap.set(invitation.team_id, members);
+            } catch (err) {
+              console.error(`Error loading team members for invitation ${invitation.id}:`, err);
+            }
+          })
+        );
+        setInvitationTeamMembers(teamMembersMap);
+      } else {
+        setInvitationTeamMembers(new Map());
+      }
       
       // Refresh available teams
       if (profile?.latitude && profile?.longitude) {
@@ -319,6 +357,24 @@ export function TeamPage() {
       // Refresh invitations
       const userInvitations = await getUserInvitations(user.id);
       setInvitations(userInvitations);
+
+      // Reload team members for remaining invitations
+      if (userInvitations.length > 0) {
+        const teamMembersMap = new Map<string, (TeamMember & { profile?: UserProfile })[]>();
+        await Promise.all(
+          userInvitations.map(async (invitation) => {
+            try {
+              const members = await getTeamMembersByTeamId(invitation.team_id);
+              teamMembersMap.set(invitation.team_id, members);
+            } catch (err) {
+              console.error(`Error loading team members for invitation ${invitation.id}:`, err);
+            }
+          })
+        );
+        setInvitationTeamMembers(teamMembersMap);
+      } else {
+        setInvitationTeamMembers(new Map());
+      }
     } catch (err: any) {
       setError(err.message || 'Error al rechazar la invitación.');
     }
@@ -411,39 +467,75 @@ export function TeamPage() {
           <Card variant="elevated" className="mb-6 bg-teal/10 border-teal/20">
             <h2 className="text-2xl font-bold text-teal mb-4">Invitaciones Pendientes</h2>
             <div className="space-y-3">
-              {invitations.map((invitation) => (
-                <div
-                  key={invitation.id}
-                  className="p-4 bg-white/60 rounded-lg border-2 border-teal/30"
-                >
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-800 mb-1">
-                        {invitation.inviter?.name || 'Alguien'} te ha invitado a unirte a su equipo
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Equipo: <span className="font-medium">{invitation.team?.name || `Equipo ${invitation.team_id.slice(0, 8)}`}</span>
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => handleAcceptInvitation(invitation.id)}
-                      >
-                        Aceptar
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeclineInvitation(invitation.id)}
-                      >
-                        Rechazar
-                      </Button>
+              {invitations.map((invitation) => {
+                const teamMembers = invitationTeamMembers.get(invitation.team_id) || [];
+                return (
+                  <div
+                    key={invitation.id}
+                    className="p-4 bg-white/60 rounded-lg border-2 border-teal/30"
+                  >
+                    <div className="flex flex-col gap-4">
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-800 mb-1">
+                            {invitation.inviter?.name || 'Alguien'} te ha invitado a unirte a su equipo
+                          </p>
+                          <p className="text-sm text-gray-600 mb-3">
+                            Equipo: <span className="font-medium">{invitation.team?.name || `Equipo ${invitation.team_id.slice(0, 8)}`}</span>
+                          </p>
+                          
+                          {/* Team Members List */}
+                          {teamMembers.length > 0 && (
+                            <div className="mt-3">
+                              <p className="text-sm font-medium text-gray-700 mb-2">
+                                Miembros del equipo ({teamMembers.length} de {invitation.team?.max_members || 'N/A'}):
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {teamMembers.map((member) => (
+                                  <div
+                                    key={member.id}
+                                    className="flex items-center gap-2 px-3 py-2 bg-white/80 rounded-lg border border-gray-200"
+                                  >
+                                    <Avatar
+                                      avatarUrl={member.profile?.avatar_url}
+                                      name={member.profile?.name || 'Desconocido'}
+                                      size="sm"
+                                    />
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-sm font-medium text-gray-800">
+                                        {member.profile?.name || 'Desconocido'}
+                                      </span>
+                                      {member.role === 'leader' && (
+                                        <span className="text-xs text-teal font-semibold">👑</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-2 flex-shrink-0">
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => handleAcceptInvitation(invitation.id)}
+                          >
+                            Aceptar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeclineInvitation(invitation.id)}
+                          >
+                            Rechazar
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Card>
         )}

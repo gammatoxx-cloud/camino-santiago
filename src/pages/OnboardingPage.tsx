@@ -253,7 +253,9 @@ export function OnboardingPage() {
         {/* Step 1: Welcome */}
         {step === 1 && (
           <div className="text-center">
-            <div className="text-6xl mb-6">🌸</div>
+            <div className="mb-6 flex justify-center">
+              <img src="/buen_camino.svg" alt="Buen Camino" className="w-24 h-24" />
+            </div>
             <h2 className="text-3xl font-bold text-teal mb-4">
               ¡Bienvenida a Tu Viaje!
             </h2>
