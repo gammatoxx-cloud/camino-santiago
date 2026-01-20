@@ -700,26 +700,6 @@ export function ProfilePage() {
           )}
         </Card>
 
-        <div className="mb-8">
-          <SectionHeader label="Progreso" icon="📊" className="mb-8" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <StatCard
-              number={currentWeek}
-              label="Semana Actual"
-            />
-            {currentPhase && (
-              <StatCard
-                number={`${currentPhase.number}`}
-                label={`Fase: ${currentPhase.name}`}
-              />
-            )}
-            <StatCard
-              number={`${totalDistance}`}
-              label="Distancia Total (km)"
-            />
-          </div>
-        </div>
-
         {/* Tu Plan Section */}
         <Card variant="elevated" className="mb-6">
           <h2 className="text-heading-3 text-teal mb-6">Tu Plan</h2>
@@ -891,9 +871,7 @@ export function ProfilePage() {
               
               <Button
                 onClick={() => {
-                  // TODO: Replace with actual checkout link when provided
-                  // For now, navigate to subscription page
-                  navigate('/subscription');
+                  window.open('https://www.magnoliasusa.org/pricing-plans/planes', '_blank');
                 }}
                 variant="primary"
                 size="lg"
@@ -904,6 +882,26 @@ export function ProfilePage() {
             </div>
           )}
         </Card>
+
+        <div className="mb-8">
+          <SectionHeader label="Progreso" icon="📊" className="mb-8" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <StatCard
+              number={currentWeek}
+              label="Semana Actual"
+            />
+            {currentPhase && (
+              <StatCard
+                number={`${currentPhase.number}`}
+                label={`Fase: ${currentPhase.name}`}
+              />
+            )}
+            <StatCard
+              number={`${totalDistance}`}
+              label="Distancia Total (km)"
+            />
+          </div>
+        </div>
 
         <Card variant="elevated" className="mb-6">
           <h2 className="text-heading-3 text-teal mb-6">Configuración de Cuenta</h2>

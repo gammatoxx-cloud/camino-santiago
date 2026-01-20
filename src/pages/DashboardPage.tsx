@@ -10,7 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { getCurrentPhase, getWeekByNumber, calculateCurrentWeekFromProgress } from '../lib/trainingData';
 import { calculateTotalScore, calculateWalkPoints } from '../lib/scoringUtils';
-import { getUserTeam, getUserInvitations } from '../lib/teamMatching';
+import { getUserTeams, getUserInvitations } from '../lib/teamMatching';
 import { videoSections, VideoSection } from '../lib/videoData';
 import { insignias } from '../lib/insigniasData';
 import { getHikesByEtapa } from '../lib/magnoliasHikesData';
@@ -103,9 +103,9 @@ export function DashboardPage() {
       if (magnoliasCompletionsError) throw magnoliasCompletionsError;
       setMagnoliasHikeCompletions(magnoliasCompletionsData || []);
 
-      // Load team data
-      const team = await getUserTeam(user.id);
-      setUserTeam(team);
+      // Load team data (get all teams, but show first one on dashboard)
+      const teams = await getUserTeams(user.id);
+      setUserTeam(teams.length > 0 ? teams[0] : null);
 
       // Load invitations
       const userInvitations = await getUserInvitations(user.id);

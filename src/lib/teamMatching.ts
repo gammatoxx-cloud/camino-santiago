@@ -275,48 +275,42 @@ export async function findAvailableTeams(
 }
 
 /**
- * Get the team that a user is currently in
+ * Get all teams that a user is currently in
  * @param userId - The user's ID
- * @returns Team with members, or null if user is not in a team
+ * @returns Array of teams with members
  */
-export async function getUserTeam(userId: string): Promise<TeamWithMembers | null> {
+export async function getUserTeams(userId: string): Promise<TeamWithMembers[]> {
   try {
-    // Get team memberships - handle case where user might have multiple (data inconsistency)
+    // Get all team memberships for the user
     const { data: teamMembers, error: memberError } = await supabase
       .from('team_members')
       .select('team_id')
-      .eq('user_id', userId)
-      .limit(1); // Only get first one if multiple exist
+      .eq('user_id', userId);
 
     if (memberError) throw memberError;
-    if (!teamMembers || teamMembers.length === 0) return null;
+    if (!teamMembers || teamMembers.length === 0) return [];
 
-    const teamId = (teamMembers[0] as { team_id: string }).team_id;
+    const teamIds = teamMembers.map(tm => (tm as { team_id: string }).team_id);
 
-    // Get team details - use maybeSingle to handle case where team doesn't exist
-    const { data: team, error: teamError } = await supabase
+    // Get all team details
+    const { data: teams, error: teamsError } = await supabase
       .from('teams')
       .select('*')
-      .eq('id', teamId)
-      .maybeSingle();
+      .in('id', teamIds);
 
-    if (teamError) throw teamError;
-    if (!team) {
-      // Team doesn't exist - data inconsistency, return null
-      console.warn(`Team ${teamId} does not exist but user ${userId} has membership record`);
-      return null;
-    }
+    if (teamsError) throw teamsError;
+    if (!teams || teams.length === 0) return [];
 
-    // Get all team members (without profiles expansion to avoid PostgREST issues)
-    const { data: members, error: membersError } = await supabase
+    // Get all team members for all teams
+    const { data: allMembers, error: allMembersError } = await supabase
       .from('team_members')
       .select('*')
-      .eq('team_id', teamId);
+      .in('team_id', teamIds);
 
-    if (membersError) throw membersError;
+    if (allMembersError) throw allMembersError;
 
-    // Get profiles separately
-    const memberUserIds = ((members || []) as TeamMember[]).map(m => m.user_id);
+    // Get all profiles for all members
+    const memberUserIds = [...new Set(((allMembers || []) as TeamMember[]).map(m => m.user_id))];
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
       .select('*')
@@ -324,21 +318,42 @@ export async function getUserTeam(userId: string): Promise<TeamWithMembers | nul
 
     if (profilesError) throw profilesError;
 
-    // Create a map for quick profile lookup
+    // Create maps for quick lookup
     const profilesMap = new Map(((profilesData || []) as UserProfile[]).map(p => [p.id, p]));
+    const membersByTeamId = new Map<string, TeamMember[]>();
+    
+    ((allMembers || []) as TeamMember[]).forEach(m => {
+      const existing = membersByTeamId.get(m.team_id) || [];
+      existing.push(m);
+      membersByTeamId.set(m.team_id, existing);
+    });
 
-    return {
-      ...(team as Team),
-      members: (members || []).map(m => ({
-        ...(m as TeamMember),
-        profile: profilesMap.get((m as TeamMember).user_id) as UserProfile | undefined,
-      })) as (TeamMember & { profile?: UserProfile })[],
-      member_count: (members || []).length,
-    };
+    // Build TeamWithMembers array
+    return ((teams || []) as Team[]).map(team => {
+      const members = membersByTeamId.get(team.id) || [];
+      return {
+        ...team,
+        members: members.map(m => ({
+          ...m,
+          profile: profilesMap.get(m.user_id) as UserProfile | undefined,
+        })) as (TeamMember & { profile?: UserProfile })[],
+        member_count: members.length,
+      };
+    });
   } catch (error: any) {
-    console.error('Error getting user team:', error);
-    throw new Error(error.message || 'Failed to get user team');
+    console.error('Error getting user teams:', error);
+    throw new Error(error.message || 'Failed to get user teams');
   }
+}
+
+/**
+ * Get the first team that a user is in (for backward compatibility)
+ * @param userId - The user's ID
+ * @returns First team with members, or null if user is not in any team
+ */
+export async function getUserTeam(userId: string): Promise<TeamWithMembers | null> {
+  const teams = await getUserTeams(userId);
+  return teams.length > 0 ? teams[0] : null;
 }
 
 /**
@@ -496,12 +511,34 @@ export async function joinTeam(userId: string, teamId: string): Promise<TeamWith
 
     if (joinError) throw joinError;
 
-    // Get updated team with all members
-    const updatedTeam = await getUserTeam(userId);
-    if (!updatedTeam) {
-      throw new Error('Failed to retrieve team after joining');
-    }
-    return updatedTeam;
+    // Get updated team with all members using the teamId we already have
+    const { data: allMembers, error: allMembersError } = await supabase
+      .from('team_members')
+      .select('*')
+      .eq('team_id', teamId);
+
+    if (allMembersError) throw allMembersError;
+
+    // Get profiles separately
+    const memberUserIds = ((allMembers || []) as TeamMember[]).map(m => m.user_id);
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('*')
+      .in('id', memberUserIds);
+
+    if (profilesError) throw profilesError;
+
+    // Create a map for quick profile lookup
+    const profilesMap = new Map(((profilesData || []) as UserProfile[]).map(p => [p.id, p]));
+
+    return {
+      ...(team as Team),
+      members: ((allMembers || []) as TeamMember[]).map(m => ({
+        ...m,
+        profile: profilesMap.get(m.user_id) as UserProfile | undefined,
+      })) as (TeamMember & { profile?: UserProfile })[],
+      member_count: (allMembers || []).length,
+    };
   } catch (error: any) {
     console.error('Error joining team:', error);
     throw new Error(error.message || 'Failed to join team');

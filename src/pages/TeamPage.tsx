@@ -11,6 +11,7 @@ import {
   findNearbyUsers,
   findAvailableTeams,
   getUserTeam,
+  getUserTeams,
   createTeam,
   joinTeam,
   leaveTeam,
@@ -36,15 +37,15 @@ export function TeamPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [userTeam, setUserTeam] = useState<TeamWithMembers | null>(null);
+  const [userTeams, setUserTeams] = useState<TeamWithMembers[]>([]);
   const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>([]);
   const [availableTeams, setAvailableTeams] = useState<TeamWithMembers[]>([]);
   const [invitations, setInvitations] = useState<TeamInvitationWithDetails[]>([]);
-  const [joinRequests, setJoinRequests] = useState<TeamJoinRequestWithDetails[]>([]);
+  const [joinRequests, setJoinRequests] = useState<Map<string, TeamJoinRequestWithDetails[]>>(new Map());
   const [userJoinRequests, setUserJoinRequests] = useState<TeamJoinRequestWithDetails[]>([]);
   const [invitationTeamMembers, setInvitationTeamMembers] = useState<Map<string, (TeamMember & { profile?: UserProfile })[]>>(new Map());
-  const [teamTotalDistance, setTeamTotalDistance] = useState<number | null>(null);
-  const [loadingTeamDistance, setLoadingTeamDistance] = useState(false);
+  const [teamTotalDistances, setTeamTotalDistances] = useState<Map<string, number | null>>(new Map());
+  const [loadingTeamDistances, setLoadingTeamDistances] = useState<Map<string, boolean>>(new Map());
   const [loading, setLoading] = useState(true);
   const [discovering, setDiscovering] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,9 +94,9 @@ export function TeamPage() {
         return;
       }
 
-      // Load user's current team
-      const team = await getUserTeam(user.id);
-      setUserTeam(team);
+      // Load user's teams
+      const teams = await getUserTeams(user.id);
+      setUserTeams(teams);
 
       // Load pending invitations
       const userInvitations = await getUserInvitations(user.id);
@@ -122,14 +123,24 @@ export function TeamPage() {
       const userRequests = await getUserJoinRequests(user.id);
       setUserJoinRequests(userRequests);
 
-      // Load team join requests if user is a team leader
-      if (team) {
-        const isLeader = team.members.some(m => m.user_id === user.id && m.role === 'leader');
-        if (isLeader) {
-          const teamRequests = await getTeamJoinRequests(team.id, user.id);
-          setJoinRequests(teamRequests);
-        }
-      }
+      // Load team join requests for all teams where user is a leader
+      const joinRequestsMap = new Map<string, TeamJoinRequestWithDetails[]>();
+      await Promise.all(
+        teams.map(async (team) => {
+          const isLeader = team.members.some(m => m.user_id === user.id && m.role === 'leader');
+          if (isLeader) {
+            try {
+              const teamRequests = await getTeamJoinRequests(team.id, user.id);
+              if (teamRequests.length > 0) {
+                joinRequestsMap.set(team.id, teamRequests);
+              }
+            } catch (err) {
+              console.error(`Error loading join requests for team ${team.id}:`, err);
+            }
+          }
+        })
+      );
+      setJoinRequests(joinRequestsMap);
 
       // Always load nearby users (to show them for inviting when in a team, or for discovery when not in a team)
       await discoverTeams(userProfile.latitude, userProfile.longitude);
@@ -140,52 +151,50 @@ export function TeamPage() {
     }
   };
 
-  // Load team distance after team is loaded (non-blocking)
-  const loadingDistanceRef = useRef(false);
+  // Load team distances after teams are loaded (non-blocking)
+  const loadingDistancesRef = useRef<Set<string>>(new Set());
   
   useEffect(() => {
-    if (!userTeam) {
-      setTeamTotalDistance(null);
-      loadingDistanceRef.current = false;
+    if (userTeams.length === 0) {
+      setTeamTotalDistances(new Map());
+      loadingDistancesRef.current.clear();
       return;
     }
 
-    // Prevent concurrent calls
-    if (loadingDistanceRef.current) {
-      return;
-    }
+    const loadTeamDistances = async () => {
+      const distancesMap = new Map<string, number | null>();
+      const loadingMap = new Map<string, boolean>();
 
-    let isMounted = true;
-    loadingDistanceRef.current = true;
+      await Promise.all(
+        userTeams.map(async (team) => {
+          // Skip if already loading
+          if (loadingDistancesRef.current.has(team.id)) {
+            return;
+          }
 
-    const loadTeamDistance = async () => {
-      try {
-        setLoadingTeamDistance(true);
-        const distance = await getTeamTotalDistance(userTeam.id);
-        if (isMounted) {
-          setTeamTotalDistance(distance);
-        }
-      } catch (err: any) {
-        console.error('Error loading team distance:', err);
-        // Graceful degradation - show 0 on error
-        if (isMounted) {
-          setTeamTotalDistance(0);
-        }
-      } finally {
-        if (isMounted) {
-          setLoadingTeamDistance(false);
-          loadingDistanceRef.current = false;
-        }
-      }
+          loadingDistancesRef.current.add(team.id);
+          loadingMap.set(team.id, true);
+          setLoadingTeamDistances(new Map(loadingMap));
+
+          try {
+            const distance = await getTeamTotalDistance(team.id);
+            distancesMap.set(team.id, distance);
+          } catch (err: any) {
+            console.error(`Error loading team distance for ${team.id}:`, err);
+            distancesMap.set(team.id, 0);
+          } finally {
+            loadingDistancesRef.current.delete(team.id);
+            loadingMap.set(team.id, false);
+            setLoadingTeamDistances(new Map(loadingMap));
+          }
+        })
+      );
+
+      setTeamTotalDistances(distancesMap);
     };
 
-    loadTeamDistance();
-
-    return () => {
-      isMounted = false;
-      loadingDistanceRef.current = false;
-    };
-  }, [userTeam?.id]); // Only depend on team ID
+    loadTeamDistances();
+  }, [userTeams.map(t => t.id).join(',')]); // Depend on team IDs
 
   const discoverTeams = async (latitude: number, longitude: number) => {
     if (!user) return;
@@ -213,8 +222,10 @@ export function TeamPage() {
 
     try {
       setError(null);
-      const team = await createTeam(user.id, newTeamName.trim() || undefined, 6);
-      setUserTeam(team);
+      const team = await createTeam(user.id, newTeamName.trim() || undefined, 14);
+      // Refresh all teams
+      const teams = await getUserTeams(user.id);
+      setUserTeams(teams);
       setShowCreateTeamModal(false);
       setNewTeamName('');
       
@@ -232,8 +243,10 @@ export function TeamPage() {
 
     try {
       setError(null);
-      const team = await joinTeam(user.id, teamId);
-      setUserTeam(team);
+      await joinTeam(user.id, teamId);
+      // Refresh all teams
+      const teams = await getUserTeams(user.id);
+      setUserTeams(teams);
       
       // Refresh available teams
       if (profile?.latitude && profile?.longitude) {
@@ -254,7 +267,9 @@ export function TeamPage() {
     try {
       setError(null);
       await leaveTeam(user.id, teamId);
-      setUserTeam(null);
+      // Refresh all teams
+      const teams = await getUserTeams(user.id);
+      setUserTeams(teams);
       
       // Refresh available teams
       if (profile?.latitude && profile?.longitude) {
@@ -275,7 +290,9 @@ export function TeamPage() {
     try {
       setError(null);
       await deleteTeam(user.id, teamId);
-      setUserTeam(null);
+      // Refresh all teams
+      const teams = await getUserTeams(user.id);
+      setUserTeams(teams);
       
       // Refresh available teams
       if (profile?.latitude && profile?.longitude) {
@@ -292,12 +309,12 @@ export function TeamPage() {
     }
   };
 
-  const handleInviteUser = async (userId: string) => {
-    if (!userTeam || !user) return;
+  const handleInviteUser = async (userId: string, teamId: string) => {
+    if (!user) return;
 
     try {
       setError(null);
-      await sendTeamInvitation(user.id, userTeam.id, userId);
+      await sendTeamInvitation(user.id, teamId, userId);
       
       // Note: We can't see other users' invitations, but we can show a success message
       
@@ -313,8 +330,10 @@ export function TeamPage() {
 
     try {
       setError(null);
-      const team = await acceptInvitation(user.id, invitationId);
-      setUserTeam(team);
+      await acceptInvitation(user.id, invitationId);
+      // Refresh all teams
+      const teams = await getUserTeams(user.id);
+      setUserTeams(teams);
       
       // Refresh invitations
       const userInvitations = await getUserInvitations(user.id);
@@ -397,18 +416,27 @@ export function TeamPage() {
     }
   };
 
-  const handleAcceptJoinRequest = async (requestId: string) => {
-    if (!user || !userTeam) return;
+  const handleAcceptJoinRequest = async (teamId: string, requestId: string) => {
+    if (!user) return;
 
     try {
       setError(null);
       setAcceptingRequestId(requestId);
-      const updatedTeam = await acceptJoinRequest(userTeam.id, requestId, user.id);
-      setUserTeam(updatedTeam);
+      await acceptJoinRequest(teamId, requestId, user.id);
       
-      // Refresh join requests
-      const teamRequests = await getTeamJoinRequests(userTeam.id, user.id);
-      setJoinRequests(teamRequests);
+      // Refresh all teams
+      const teams = await getUserTeams(user.id);
+      setUserTeams(teams);
+      
+      // Refresh join requests for this team
+      const teamRequests = await getTeamJoinRequests(teamId, user.id);
+      const joinRequestsMap = new Map(joinRequests);
+      if (teamRequests.length > 0) {
+        joinRequestsMap.set(teamId, teamRequests);
+      } else {
+        joinRequestsMap.delete(teamId);
+      }
+      setJoinRequests(joinRequestsMap);
       
       // Refresh nearby users and available teams
       if (profile?.latitude && profile?.longitude) {
@@ -421,17 +449,23 @@ export function TeamPage() {
     }
   };
 
-  const handleDeclineJoinRequest = async (requestId: string) => {
-    if (!user || !userTeam) return;
+  const handleDeclineJoinRequest = async (teamId: string, requestId: string) => {
+    if (!user) return;
 
     try {
       setError(null);
       setDecliningRequestId(requestId);
-      await declineJoinRequest(userTeam.id, requestId, user.id);
+      await declineJoinRequest(teamId, requestId, user.id);
       
-      // Refresh join requests
-      const teamRequests = await getTeamJoinRequests(userTeam.id, user.id);
-      setJoinRequests(teamRequests);
+      // Refresh join requests for this team
+      const teamRequests = await getTeamJoinRequests(teamId, user.id);
+      const joinRequestsMap = new Map(joinRequests);
+      if (teamRequests.length > 0) {
+        joinRequestsMap.set(teamId, teamRequests);
+      } else {
+        joinRequestsMap.delete(teamId);
+      }
+      setJoinRequests(joinRequestsMap);
     } catch (err: any) {
       setError(err.message || 'Error al rechazar la solicitud.');
     } finally {
@@ -541,149 +575,171 @@ export function TeamPage() {
         )}
 
         {/* Join Requests Section - Show for team leaders */}
-        {userTeam && joinRequests.length > 0 && userTeam.members.some(m => m.user_id === user?.id && m.role === 'leader') && (
+        {userTeams.length > 0 && Array.from(joinRequests.values()).flat().length > 0 && (
           <Card variant="elevated" className="mb-6 bg-amber/10 border-amber/20">
             <div className="flex items-center gap-2 mb-4">
               <h2 className="text-2xl font-bold text-teal">Solicitudes de Unión</h2>
-              {joinRequests.length > 0 && (
+              {Array.from(joinRequests.values()).flat().length > 0 && (
                 <span className="px-2.5 py-1 bg-amber-500 text-white rounded-full text-sm font-bold min-w-[24px] text-center">
-                  {joinRequests.length}
+                  {Array.from(joinRequests.values()).flat().length}
                 </span>
               )}
             </div>
-            <div className="space-y-3">
-              {joinRequests.map((request) => (
-                <TeamJoinRequestCard
-                  key={request.id}
-                  request={request}
-                  onAccept={handleAcceptJoinRequest}
-                  onDecline={handleDeclineJoinRequest}
-                  accepting={acceptingRequestId === request.id}
-                  declining={decliningRequestId === request.id}
-                />
-              ))}
+            <div className="space-y-4">
+              {Array.from(joinRequests.entries()).map(([teamId, requests]) => {
+                const team = userTeams.find(t => t.id === teamId);
+                if (!team || requests.length === 0) return null;
+                return (
+                  <div key={teamId} className="space-y-3">
+                    <h3 className="text-lg font-semibold text-teal">
+                      {team.name || `Equipo ${team.id.slice(0, 8)}`}
+                    </h3>
+                    {requests.map((request) => (
+                      <TeamJoinRequestCard
+                        key={request.id}
+                        request={request}
+                        onAccept={(id) => handleAcceptJoinRequest(teamId, id)}
+                        onDecline={(id) => handleDeclineJoinRequest(teamId, id)}
+                        accepting={acceptingRequestId === request.id}
+                        declining={decliningRequestId === request.id}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
             </div>
           </Card>
         )}
 
-        {/* User's Current Team */}
-        {userTeam ? (
+        {/* User's Teams */}
+        {userTeams.length > 0 ? (
           <>
-            <Card variant="elevated" className="mb-6">
-              <div className="flex flex-col md:flex-row md:justify-between items-start mb-4 gap-4 md:gap-0">
-                <div>
-                  <h2 className="text-2xl font-bold text-teal mb-2">
-                    Tu Equipo: {userTeam.name || `Equipo ${userTeam.id.slice(0, 8)}`}
-                  </h2>
-                  <p className="text-gray-600">
-                    {userTeam.member_count} de {Math.max(userTeam.max_members, 14)} miembros
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  {userTeam.created_by === user?.id && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleDeleteTeam(userTeam.id)}
-                    >
-                      Eliminar Equipo
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleLeaveTeam(userTeam.id)}
-                  >
-                    Salir del Equipo
-                  </Button>
-                </div>
-              </div>
-            </Card>
-
-            {/* Team Statistics Card */}
-            <TeamStatsCard 
-              totalDistance={teamTotalDistance} 
-              loading={loadingTeamDistance}
-            />
-
-            <Card variant="elevated" className="mb-6">
-              <TeamMemberList team={userTeam} currentUserId={user?.id || ''} />
-            </Card>
-
-            {/* Nearby Users Card - Show when user has a team and can invite others */}
-            {userTeam.member_count < Math.max(userTeam.max_members, 14) && (
-              <Card variant="elevated" className="mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="text-2xl font-bold text-teal">
-                      Usuarios Cercanos ({nearbyUsers.filter(u => !userTeam.members.some(m => m.user_id === u.id)).length})
-                    </h2>
-                    <p className="text-gray-600 text-sm mt-1">
-                      Encuentra usuarios cercanos para invitar a tu equipo
-                    </p>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={discovering}>
-                    {discovering ? 'Buscando...' : 'Actualizar'}
-                  </Button>
-                </div>
-
-                {discovering ? (
-                  <div className="text-center py-8">
-                    <div className="inline-block w-8 h-8 border-4 border-teal border-t-transparent rounded-full animate-spin" />
-                    <p className="mt-2 text-gray-600">Buscando usuarios cercanos...</p>
-                  </div>
-                ) : nearbyUsers.filter(u => !userTeam.members.some(m => m.user_id === u.id)).length === 0 ? (
-                  <p className="text-gray-600 py-4">
-                    No se encontraron usuarios cercanos dentro de 10 millas. ¡Intenta actualizar o pide a tus amigos que se unan!
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {nearbyUsers
-                      .filter(u => !userTeam.members.some(m => m.user_id === u.id))
-                      .map((nearbyUser) => (
-                        <div
-                          key={nearbyUser.id}
-                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-white/60 rounded-lg"
+            {userTeams.map((team) => {
+              const isLeader = team.members.some(m => m.user_id === user?.id && m.role === 'leader');
+              const teamDistance = teamTotalDistances.get(team.id) ?? null;
+              const loadingDistance = loadingTeamDistances.get(team.id) ?? false;
+              const teamUserIds = new Set(team.members.map(m => m.user_id));
+              
+              return (
+                <div key={team.id} className="mb-6 space-y-4">
+                  <Card variant="elevated">
+                    <div className="flex flex-col md:flex-row md:justify-between items-start mb-4 gap-4 md:gap-0">
+                      <div>
+                        <h2 className="text-2xl font-bold text-teal mb-2">
+                          {team.name || `Equipo ${team.id.slice(0, 8)}`}
+                        </h2>
+                        <p className="text-gray-600">
+                          {team.member_count} de {Math.max(team.max_members, 14)} miembros
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        {team.created_by === user?.id && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleDeleteTeam(team.id)}
+                          >
+                            Eliminar Equipo
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleLeaveTeam(team.id)}
                         >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="font-medium text-gray-800 truncate">{nearbyUser.name}</p>
-                              {nearbyUser.is_team_leader && (
-                                <span className="px-2 py-0.5 bg-teal/10 text-teal rounded-full text-xs font-semibold whitespace-nowrap">
-                                  👑 Líder
-                                </span>
-                              )}
-                            </div>
-                            {nearbyUser.team_name && (
-                              <p className="text-sm text-teal font-medium mb-1 truncate">
-                                {nearbyUser.team_name}
-                              </p>
-                            )}
-                            {nearbyUser.location && (
-                              <p className="text-sm text-gray-600 truncate">{nearbyUser.location}</p>
-                            )}
-                          </div>
-                          <div className="flex flex-col sm:items-end gap-2 flex-shrink-0">
-                            <p className="text-sm font-medium text-teal whitespace-nowrap">
-                              A {nearbyUser.distance_miles.toFixed(1)} millas
-                            </p>
-                            {userTeam.created_by === user?.id && userTeam.member_count < userTeam.max_members && (
-                              <Button
-                                variant="primary"
-                                size="sm"
-                                onClick={() => handleInviteUser(nearbyUser.id)}
-                                className="min-h-[44px] w-full sm:w-auto"
-                              >
-                                Invitar
-                              </Button>
-                            )}
-                          </div>
+                          Salir del Equipo
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Team Statistics Card */}
+                  <TeamStatsCard 
+                    totalDistance={teamDistance} 
+                    loading={loadingDistance}
+                  />
+
+                  <Card variant="elevated">
+                    <TeamMemberList team={team} currentUserId={user?.id || ''} />
+                  </Card>
+
+                  {/* Nearby Users Card - Show when user has a team and can invite others */}
+                  {isLeader && team.member_count < Math.max(team.max_members, 14) && (
+                    <Card variant="elevated">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h2 className="text-2xl font-bold text-teal">
+                            Usuarios Cercanos ({nearbyUsers.filter(u => !teamUserIds.has(u.id)).length})
+                          </h2>
+                          <p className="text-gray-600 text-sm mt-1">
+                            Encuentra usuarios cercanos para invitar a este equipo
+                          </p>
                         </div>
-                      ))}
-                  </div>
-                )}
-              </Card>
-            )}
+                        <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={discovering}>
+                          {discovering ? 'Buscando...' : 'Actualizar'}
+                        </Button>
+                      </div>
+
+                      {discovering ? (
+                        <div className="text-center py-8">
+                          <div className="inline-block w-8 h-8 border-4 border-teal border-t-transparent rounded-full animate-spin" />
+                          <p className="mt-2 text-gray-600">Buscando usuarios cercanos...</p>
+                        </div>
+                      ) : nearbyUsers.filter(u => !teamUserIds.has(u.id)).length === 0 ? (
+                        <p className="text-gray-600 py-4">
+                          No se encontraron usuarios cercanos dentro de 10 millas. ¡Intenta actualizar o pide a tus amigos que se unan!
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          {nearbyUsers
+                            .filter(u => !teamUserIds.has(u.id))
+                            .map((nearbyUser) => (
+                              <div
+                                key={nearbyUser.id}
+                                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-white/60 rounded-lg"
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <p className="font-medium text-gray-800 truncate">{nearbyUser.name}</p>
+                                    {nearbyUser.is_team_leader && (
+                                      <span className="px-2 py-0.5 bg-teal/10 text-teal rounded-full text-xs font-semibold whitespace-nowrap">
+                                        👑 Líder
+                                      </span>
+                                    )}
+                                  </div>
+                                  {nearbyUser.team_name && (
+                                    <p className="text-sm text-teal font-medium mb-1 truncate">
+                                      {nearbyUser.team_name}
+                                    </p>
+                                  )}
+                                  {nearbyUser.location && (
+                                    <p className="text-sm text-gray-600 truncate">{nearbyUser.location}</p>
+                                  )}
+                                </div>
+                                <div className="flex flex-col sm:items-end gap-2 flex-shrink-0">
+                                  <p className="text-sm font-medium text-teal whitespace-nowrap">
+                                    A {nearbyUser.distance_miles.toFixed(1)} millas
+                                  </p>
+                                  {team.member_count < team.max_members && (
+                                    <Button
+                                      variant="primary"
+                                      size="sm"
+                                      onClick={() => handleInviteUser(nearbyUser.id, team.id)}
+                                      className="min-h-[44px] w-full sm:w-auto"
+                                    >
+                                      Invitar
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </Card>
+                  )}
+                </div>
+              );
+            })}
           </>
         ) : (
           <>
