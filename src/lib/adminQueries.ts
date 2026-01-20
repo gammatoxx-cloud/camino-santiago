@@ -422,3 +422,21 @@ export async function updateUserPlan(userId: string, plan: UserPlan): Promise<vo
     throw new Error(error.message || 'Failed to update user plan');
   }
 }
+
+/**
+ * Delete a user (admin only)
+ * @param userId - The user ID to delete
+ */
+export async function deleteUser(userId: string): Promise<void> {
+  try {
+    // Use admin function to delete user
+    const { error } = await (supabase.rpc as any)('admin_delete_user', {
+      user_id_param: userId,
+    });
+
+    if (error) throw error;
+  } catch (error: any) {
+    console.error('Error deleting user:', error);
+    throw new Error(error.message || 'Failed to delete user');
+  }
+}

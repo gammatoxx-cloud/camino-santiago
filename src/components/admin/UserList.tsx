@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Card } from '../ui/Card';
-import { updateUserPlan } from '../../lib/adminQueries';
+import { Button } from '../ui/Button';
+import { updateUserPlan, deleteUser } from '../../lib/adminQueries';
 import type { UserWithStats } from '../../lib/adminQueries';
 import type { UserPlan } from '../../types';
 
@@ -8,6 +9,7 @@ interface UserListProps {
   users: UserWithStats[];
   loading?: boolean;
   onPlanUpdate?: () => void;
+  onUserDelete?: () => void;
 }
 
 const PLAN_NAMES: Record<UserPlan, string> = {
@@ -16,9 +18,12 @@ const PLAN_NAMES: Record<UserPlan, string> = {
   completo: 'Completo',
 };
 
-export function UserList({ users, loading, onPlanUpdate }: UserListProps) {
+export function UserList({ users, loading, onPlanUpdate, onUserDelete }: UserListProps) {
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [confirmDeleteUserId, setConfirmDeleteUserId] = useState<string | null>(null);
 
   const handlePlanChange = async (userId: string, newPlan: UserPlan) => {
     try {
@@ -34,6 +39,33 @@ export function UserList({ users, loading, onPlanUpdate }: UserListProps) {
     } finally {
       setUpdatingUserId(null);
     }
+  };
+
+  const handleDeleteClick = (userId: string) => {
+    setConfirmDeleteUserId(userId);
+    setDeleteError(null);
+  };
+
+  const handleConfirmDelete = async (userId: string) => {
+    try {
+      setDeletingUserId(userId);
+      setDeleteError(null);
+      await deleteUser(userId);
+      setConfirmDeleteUserId(null);
+      if (onUserDelete) {
+        onUserDelete();
+      }
+    } catch (error: any) {
+      setDeleteError(error.message || 'Error al eliminar usuario');
+      console.error('Error deleting user:', error);
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmDeleteUserId(null);
+    setDeleteError(null);
   };
 
   if (loading) {
@@ -65,6 +97,12 @@ export function UserList({ users, loading, onPlanUpdate }: UserListProps) {
         </div>
       )}
 
+      {deleteError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-700 text-sm">{deleteError}</p>
+        </div>
+      )}
+
       <div className="space-y-3">
         {users.map((user) => {
           const currentPlan = (user.user_plan || 'gratis') as UserPlan;
@@ -93,7 +131,7 @@ export function UserList({ users, loading, onPlanUpdate }: UserListProps) {
                   </div>
                 </div>
 
-                {/* Plan Selection */}
+                {/* Plan Selection and Delete Button */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2 border-t border-white/40">
                   <div className="flex-1">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -103,7 +141,7 @@ export function UserList({ users, loading, onPlanUpdate }: UserListProps) {
                       <select
                         value={currentPlan}
                         onChange={(e) => handlePlanChange(user.id, e.target.value as UserPlan)}
-                        disabled={isUpdating}
+                        disabled={isUpdating || confirmDeleteUserId === user.id}
                         className="px-3 py-2 text-sm rounded-lg border-2 border-gray-200 focus:border-teal focus:outline-none bg-white/80 font-semibold text-teal min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <option value="gratis">Gratis</option>
@@ -119,6 +157,39 @@ export function UserList({ users, loading, onPlanUpdate }: UserListProps) {
                     <span className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-teal/10 text-teal">
                       {PLAN_NAMES[currentPlan]}
                     </span>
+                    {confirmDeleteUserId === user.id ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-red-600 font-medium">¿Eliminar?</span>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleConfirmDelete(user.id)}
+                          disabled={deletingUserId === user.id}
+                          className="bg-red-600 hover:bg-red-700 min-h-[36px] px-3"
+                        >
+                          {deletingUserId === user.id ? 'Eliminando...' : 'Confirmar'}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleCancelDelete}
+                          disabled={deletingUserId === user.id}
+                          className="min-h-[36px] px-3"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteClick(user.id)}
+                        disabled={deletingUserId === user.id}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 min-h-[36px] px-3"
+                      >
+                        Eliminar
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
