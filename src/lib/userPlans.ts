@@ -27,12 +27,26 @@ export async function getUserPlan(userId: string): Promise<UserPlan> {
       .maybeSingle();
 
     if (error) throw error;
-    if (!data || !data.user_plan) {
+    if (!data) {
+      // Default to 'gratis' if not set
+      return 'gratis';
+    }
+    
+    // Type assertion to handle user_plan field that may not be in generated types yet
+    const profileData = data as { user_plan?: string | null };
+    const userPlan = profileData.user_plan;
+    
+    if (!userPlan || typeof userPlan !== 'string') {
       // Default to 'gratis' if not set
       return 'gratis';
     }
 
-    return data.user_plan as UserPlan;
+    // Validate it's a valid plan type
+    if (userPlan === 'gratis' || userPlan === 'basico' || userPlan === 'completo') {
+      return userPlan as UserPlan;
+    }
+
+    return 'gratis';
   } catch (error) {
     console.error('Error fetching user plan:', error);
     // Default to 'gratis' on error

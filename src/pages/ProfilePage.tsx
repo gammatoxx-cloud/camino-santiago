@@ -13,7 +13,7 @@ import { geocodeAddress } from '../lib/geocoding';
 import { uploadProfilePicture, deleteProfilePicture, validateImageFile } from '../lib/imageUpload';
 import { updateEmail, updatePassword } from '../lib/auth';
 import { validatePassword, isPasswordValid } from '../lib/passwordValidation';
-import { getSubscriptionStatus, createPaymentLink } from '../lib/wixPayments';
+import { getSubscriptionStatus } from '../lib/wixPayments';
 import { useUserPlan } from '../hooks/useUserPlan';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -57,7 +57,6 @@ export function ProfilePage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<any>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
-  const [creatingPaymentLink, setCreatingPaymentLink] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -91,39 +90,6 @@ export function ProfilePage() {
       console.error('Error loading subscription:', error);
     } finally {
       setSubscriptionLoading(false);
-    }
-  };
-
-  const handleSubscribe = async () => {
-    if (!user || !profile) {
-      alert('Por favor, completa tu perfil primero.');
-      return;
-    }
-
-    setCreatingPaymentLink(true);
-
-    try {
-      const result = await createPaymentLink(
-        user.email || '',
-        profile.name,
-        user.id
-      );
-
-      if (result.error || !result.paymentLinkUrl) {
-        console.error('Payment link creation failed:', result);
-        // Show more detailed error message
-        const errorMsg = result.error || 'No se pudo crear el enlace de pago. Por favor, intenta de nuevo.';
-        alert(`Error: ${errorMsg}\n\nSi el problema persiste, verifica:\n1. Que la función Edge esté desplegada\n2. Que los secretos estén configurados en Supabase\n3. Revisa la consola del navegador para más detalles`);
-        setCreatingPaymentLink(false);
-        return;
-      }
-
-      // Redirect to Wix checkout
-      window.location.href = result.paymentLinkUrl;
-    } catch (err) {
-      console.error('Error creating payment link:', err);
-      alert('Ocurrió un error. Por favor, intenta de nuevo.');
-      setCreatingPaymentLink(false);
     }
   };
 
@@ -932,9 +898,8 @@ export function ProfilePage() {
                 variant="primary"
                 size="lg"
                 className="w-full min-h-[56px] text-lg font-bold"
-                disabled={creatingPaymentLink}
               >
-                {creatingPaymentLink ? 'Procesando...' : 'Actualizar Plan'}
+                Actualizar Plan
               </Button>
             </div>
           )}

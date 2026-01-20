@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
 import { updateUserPlan } from '../../lib/adminQueries';
 import type { UserWithStats } from '../../lib/adminQueries';
 import type { UserPlan } from '../../types';

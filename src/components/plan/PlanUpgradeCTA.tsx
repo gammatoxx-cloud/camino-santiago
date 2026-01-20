@@ -1,10 +1,8 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import type { UserPlan } from '../../types';
 
 interface PlanUpgradeCTAProps {
-  currentPlan: UserPlan;
   upgradeToPlan: UserPlan;
   className?: string;
   variant?: 'button' | 'inline';
@@ -34,7 +32,6 @@ const PLAN_BENEFITS: Record<UserPlan, string[]> = {
 };
 
 export function PlanUpgradeCTA({
-  currentPlan,
   upgradeToPlan,
   className = '',
   variant = 'button',

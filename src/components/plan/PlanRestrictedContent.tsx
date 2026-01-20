@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserPlan } from '../../hooks/useUserPlan';
@@ -23,7 +23,7 @@ export function PlanRestrictedContent({
   const navigate = useNavigate();
   const { user } = useAuth();
   const { plan, loading } = useUserPlan();
-  const [showOverlay, setShowOverlay] = useState(true);
+  const [showOverlay] = useState(true);
 
   // Show loading state
   if (loading || !plan) {
@@ -66,7 +66,6 @@ export function PlanRestrictedContent({
       {/* Overlay */}
       {showOverlay && (
         <BlurOverlay
-          requiredPlan={requiredPlan}
           upgradeToPlan={upgradeToPlan}
           onUpgrade={() => {
             // Navigate to subscription page

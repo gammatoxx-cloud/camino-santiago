@@ -1,9 +1,7 @@
-import React from 'react';
 import { Button } from '../ui/Button';
 import type { UserPlan } from '../../types';
 
 interface BlurOverlayProps {
-  requiredPlan: UserPlan;
   upgradeToPlan: UserPlan;
   onUpgrade: () => void;
   className?: string;
@@ -21,7 +19,7 @@ const PLAN_DESCRIPTIONS: Record<UserPlan, string> = {
   completo: 'Acceso completo incluyendo Caminatas Magnolias',
 };
 
-export function BlurOverlay({ requiredPlan, upgradeToPlan, onUpgrade, className = '' }: BlurOverlayProps) {
+export function BlurOverlay({ upgradeToPlan, onUpgrade, className = '' }: BlurOverlayProps) {
   const planName = PLAN_NAMES[upgradeToPlan];
   const planDescription = PLAN_DESCRIPTIONS[upgradeToPlan];
 

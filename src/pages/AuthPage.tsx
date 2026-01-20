@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { AuthForm } from '../components/auth/AuthForm';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { getUserPlan } from '../lib/userPlans';
 import { isAdmin } from '../lib/admin';
 
 export function AuthPage() {
@@ -29,7 +28,13 @@ export function AuthPage() {
 
     if (profile) {
       // Check user's plan and admin status
-      const userPlan = (profile.user_plan as 'gratis' | 'basico' | 'completo') || 'gratis';
+      // Type assertion to handle user_plan field that may not be in generated types yet
+      const profileData = profile as { id: string; user_plan?: string | null };
+      const userPlanValue = profileData.user_plan;
+      const userPlan = (userPlanValue && typeof userPlanValue === 'string' && 
+        (userPlanValue === 'gratis' || userPlanValue === 'basico' || userPlanValue === 'completo'))
+        ? (userPlanValue as 'gratis' | 'basico' | 'completo')
+        : 'gratis';
       const userIsAdmin = isAdmin(targetUser);
       
       // Admin always goes to dashboard, basico users go to resources
