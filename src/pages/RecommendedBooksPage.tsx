@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { SectionHeader } from '../components/ui/SectionHeader';
 import { BookAccordion } from '../components/resources/BookAccordion';
 import { books } from '../lib/booksData';
 import { useAuth } from '../contexts/AuthContext';
@@ -95,7 +94,7 @@ export function RecommendedBooksPage() {
   };
 
   return (
-    <div className="min-h-screen bg-cream pb-20 md:pb-6 pt-8 md:pt-12 overflow-x-hidden">
+    <div className="min-h-screen bg-cream pb-20 md:pb-6 pt-8 md:pt-8 overflow-x-hidden">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-8">
         {/* Back Button */}
         <Link
@@ -123,7 +122,13 @@ export function RecommendedBooksPage() {
           </span>
         </Link>
 
-        <SectionHeader label="Biblioteca" icon="📖" />
+        <div className="flex justify-center mb-8">
+          <img
+            src="/libros_icon.svg"
+            alt="Libros"
+            className="max-w-full h-auto w-1/4 md:w-[20%]"
+          />
+        </div>
         <h1 className="text-heading-1 text-teal mb-6 md:mb-8 text-center">
           Libros Recomendados
         </h1>

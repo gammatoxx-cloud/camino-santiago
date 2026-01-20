@@ -4,7 +4,6 @@ import { DashboardTrainingCard } from '../components/dashboard/DashboardTraining
 import { DashboardTeamCard } from '../components/dashboard/DashboardTeamCard';
 import { DashboardVideosSection } from '../components/dashboard/DashboardVideosSection';
 import { DashboardInsigniasCard } from '../components/dashboard/DashboardInsigniasCard';
-import { SectionHeader } from '../components/ui/SectionHeader';
 import { PlanRestrictedContent } from '../components/plan/PlanRestrictedContent';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -243,11 +242,14 @@ export function DashboardPage() {
     <PlanRestrictedContent requiredPlan="basico" upgradeToPlan="basico">
       <div className="min-h-screen bg-cream pb-24 md:pb-6 pt-10 md:pt-12 overflow-x-hidden">
         <div className="max-w-6xl mx-auto px-4 py-6 md:py-8">
-          <SectionHeader label="Tablero" icon="📊" />
+          <div className="flex justify-center mb-8">
+            <img 
+              src="/tablero_icon.svg" 
+              alt="Tablero" 
+              className="max-w-full h-auto w-[17.5%]"
+            />
+          </div>
           <div className="mb-10 md:mb-14 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-teal/10 to-teal/5 mb-4 md:mb-5">
-              <span className="text-3xl md:text-4xl">🎯</span>
-            </div>
             <h1 className="text-heading-1 text-teal">
               Bienvenida a Tu Tablero
             </h1>

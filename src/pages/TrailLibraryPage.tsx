@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { SectionHeader } from '../components/ui/SectionHeader';
 import { PlanRestrictedContent } from '../components/plan/PlanRestrictedContent';
 import { Accordion } from '../components/ui/Accordion';
 import { TrailCard } from '../components/trails/TrailCard';
@@ -98,9 +97,15 @@ export function TrailLibraryPage() {
 
   return (
     <PlanRestrictedContent requiredPlan="basico" upgradeToPlan="basico">
-      <div className="min-h-screen bg-cream pb-20 md:pb-6 pt-8 md:pt-12 overflow-x-hidden">
+      <div className="min-h-screen bg-cream pb-20 md:pb-6 pt-8 md:pt-8 overflow-x-hidden">
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-8">
-          <SectionHeader label="Biblioteca de Senderos" icon="🏔️" />
+          <div className="flex justify-center mb-8">
+            <img
+              src="/senderos_icon.svg"
+              alt="Senderos"
+              className="max-w-full h-auto w-1/4"
+            />
+          </div>
           <h1 className="text-heading-1 text-teal mb-14 md:mb-16 text-center">
             Senderos para Caminar
           </h1>

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { SectionHeader } from '../components/ui/SectionHeader';
 import { PlanRestrictedContent } from '../components/plan/PlanRestrictedContent';
 import { Card } from '../components/ui/Card';
 import { AlbumCard } from '../components/gallery/AlbumCard';
@@ -45,7 +44,13 @@ export function GalleryPage() {
     <PlanRestrictedContent requiredPlan="basico" upgradeToPlan="basico">
       <div className="min-h-screen bg-cream px-4 py-8 md:px-8 pt-20 md:pt-12">
         <div className="max-w-6xl mx-auto">
-          <SectionHeader label="Galería" icon="📸" />
+          <div className="flex justify-center mb-8">
+            <img
+              src="/galeria_icon.svg"
+              alt="Galeria"
+              className="max-w-full h-auto w-1/4 md:w-[20%]"
+            />
+          </div>
           <h1 className="text-heading-1 text-teal mb-14 md:mb-16 text-center">
             Galería de Imágenes
           </h1>

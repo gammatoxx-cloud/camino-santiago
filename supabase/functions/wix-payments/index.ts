@@ -93,7 +93,6 @@ Deno.serve(async (req: Request) => {
       const appUrl = Deno.env.get('APP_URL') || 'http://localhost:5173';
       
       // Get plan details to get the price
-      console.log('Fetching plan details for plan ID:', WIX_PLAN_ID);
       const planResponse = await fetch(
         `${WIX_API_BASE}/pricing-plans/v3/plans/${WIX_PLAN_ID}`,
         {
@@ -119,7 +118,6 @@ Deno.serve(async (req: Request) => {
       }
 
       const planData = await planResponse.json();
-      console.log('Plan data received:', JSON.stringify(planData, null, 2));
       
       // Extract price from plan (structure may vary)
       // Ensure price is a valid decimal string (e.g., "20.00" not 20 or undefined)
@@ -145,14 +143,6 @@ Deno.serve(async (req: Request) => {
                           planData.plan?.pricing?.singlePaymentForDuration?.price?.currency ||
                           'USD';
       const planName = planData.plan?.name || 'Camino Santiago Monthly Subscription';
-      
-      console.log('Using plan price:', { planPrice, planPriceType: typeof planPrice, planCurrency, planName });
-
-      // Ensure we have valid values
-      const finalPrice = String(planPrice || '20.00');
-      const finalQuantity = 1;
-      
-      console.log('Final values before creating request:', { finalPrice, finalPriceType: typeof finalPrice, finalQuantity, finalQuantityType: typeof finalQuantity });
 
       // Create payment link with minimal line item
       // When type is ECOM, ecomPaymentLink.lineItems is required with at least 1 item
@@ -163,14 +153,11 @@ Deno.serve(async (req: Request) => {
         },
         options: {
           customItem: {
-            price: finalPrice,
-            quantity: finalQuantity,
+            price: String(planPrice || '20.00'),
+            quantity: 1,
           },
         },
       };
-      
-      console.log('Line item object before request:', JSON.stringify(lineItem, null, 2));
-      console.log('Line item options.customItem:', JSON.stringify(lineItem.options.customItem, null, 2));
 
       const paymentLinkRequestBody = {
         paymentLink: {
@@ -191,8 +178,6 @@ Deno.serve(async (req: Request) => {
           },
         },
       };
-
-      console.log('Creating payment link with request:', JSON.stringify(paymentLinkRequestBody, null, 2));
 
       const paymentLinkResponse = await fetch(
         `${WIX_API_BASE}/payment-links/v1/payment-links`,
@@ -225,13 +210,10 @@ Deno.serve(async (req: Request) => {
       }
 
       const paymentLinkData = await paymentLinkResponse.json();
-      console.log('Payment link response:', JSON.stringify(paymentLinkData, null, 2));
       
       const paymentLink = paymentLinkData.paymentLink || paymentLinkData;
       const paymentLinkUrl = paymentLink.url || paymentLink.urls?.primary || paymentLink.checkoutUrl || '';
       const paymentLinkId = paymentLink.id || '';
-      
-      console.log('Payment link created:', { id: paymentLinkId, url: paymentLinkUrl });
       
       // Store pending subscription in database
       const { error: dbError } = await supabaseClient

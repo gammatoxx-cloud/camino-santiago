@@ -16,8 +16,16 @@ export function ResourceCard({ to, icon, title, description }: ResourceCardProps
         className="h-full hover:shadow-glass-elevated transition-all duration-300 hover:-translate-y-1 cursor-pointer"
       >
         <div className="flex flex-col items-center text-center h-full">
-          <div className="text-6xl md:text-7xl mb-4 md:mb-6">
-            {icon}
+          <div className="mb-4 md:mb-6">
+            {icon.endsWith('.svg') || icon.endsWith('.png') || icon.endsWith('.jpg') || icon.endsWith('.webp') ? (
+              <img 
+                src={icon.startsWith('/') ? icon : `/${icon}`}
+                alt={title}
+                className="w-16 h-16 md:w-20 md:h-20 object-contain"
+              />
+            ) : (
+              <div className="text-6xl md:text-7xl">{icon}</div>
+            )}
           </div>
           <h3 className="text-heading-3 text-teal mb-3 md:mb-4 font-bold">
             {title}

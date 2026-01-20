@@ -4,7 +4,6 @@ import { CurrentWeekCard } from '../components/training/CurrentWeekCard';
 import { CurrentPhaseCard } from '../components/training/CurrentPhaseCard';
 import { NextPhaseCard } from '../components/training/NextPhaseCard';
 import { ScoreCard } from '../components/training/ScoreCard';
-import { SectionHeader } from '../components/ui/SectionHeader';
 import { PlanRestrictedContent } from '../components/plan/PlanRestrictedContent';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -421,9 +420,15 @@ export function TrainingPage() {
 
   return (
     <PlanRestrictedContent requiredPlan="basico" upgradeToPlan="basico">
-      <div className="min-h-screen bg-cream pb-20 md:pb-6 pt-8 md:pt-12 overflow-x-hidden">
+      <div className="min-h-screen bg-cream pb-20 md:pb-6 pt-8 md:pt-8 overflow-x-hidden">
         <div className="max-w-4xl mx-auto px-4 py-4 md:py-8">
-          <SectionHeader label={isSpanishPhase ? "Entrenamiento" : "Training"} icon="🚶" />
+          <div className="flex justify-center mb-8">
+            <img 
+              src="/entrenamiento1.svg" 
+              alt="Entrenamiento" 
+              className="max-w-full h-auto w-1/4"
+            />
+          </div>
           <h1 className="text-heading-1 text-teal mb-12 text-center">
             {isSpanishPhase ? 'Tu Viaje de Entrenamiento' : 'Your Training Journey'}
           </h1>

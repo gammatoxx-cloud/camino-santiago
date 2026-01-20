@@ -489,6 +489,13 @@ export function TeamPage() {
     <PlanRestrictedContent requiredPlan="basico" upgradeToPlan="basico">
       <div className="min-h-screen bg-cream px-4 py-8 md:px-8">
         <div className="max-w-4xl mx-auto">
+          <div className="flex justify-center mb-8">
+            <img
+              src="/equipo_icon.svg"
+              alt="Equipo"
+              className="max-w-full h-auto w-1/4"
+            />
+          </div>
         {error && (
           <Card variant="elevated" className="mb-6 bg-red-50 border-red-200">
             <p className="text-red-700">{error}</p>

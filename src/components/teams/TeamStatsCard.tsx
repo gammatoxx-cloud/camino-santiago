@@ -24,9 +24,6 @@ export function TeamStatsCard({ totalDistance, loading = false, className = '' }
   return (
     <Card variant="elevated" className={`mb-6 ${className}`}>
       <div className="flex flex-col items-center justify-center py-6 md:py-8">
-        {/* Icon */}
-        <div className="mb-4 text-4xl md:text-5xl">🚶</div>
-        
         {/* Distance Number */}
         <div className="text-4xl md:text-5xl font-bold text-teal mb-2">
           {formattedDistance} km

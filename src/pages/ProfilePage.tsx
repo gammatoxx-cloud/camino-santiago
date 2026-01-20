@@ -480,7 +480,13 @@ export function ProfilePage() {
   return (
     <div className="min-h-screen bg-cream pb-20 md:pb-6 pt-8 md:pt-12">
       <div className="max-w-2xl mx-auto px-4 py-4 md:py-8">
-        <SectionHeader label="Perfil" icon="👤" />
+        <div className="flex justify-center mb-8">
+          <img
+            src="/perfil_icon.svg"
+            alt="Perfil"
+            className="max-w-full h-auto w-1/4"
+          />
+        </div>
         <h1 className="text-heading-1 text-teal mb-12 text-center">
           Tu Perfil
         </h1>
