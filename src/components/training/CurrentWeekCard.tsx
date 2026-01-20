@@ -61,18 +61,11 @@ export function CurrentWeekCard({
     return completedDays.includes(dayName);
   };
 
-  const getDayName = (dayName: string) => {
-    if (!isSpanishPhase) return dayName;
-    const dayMap: Record<string, string> = {
-      'Monday': 'Lunes',
-      'Tuesday': 'Martes',
-      'Wednesday': 'Miércoles',
-      'Thursday': 'Jueves',
-      'Friday': 'Viernes',
-      'Saturday': 'Sábado',
-      'Sunday': 'Domingo'
-    };
-    return dayMap[dayName] || dayName;
+  const getDayName = (index: number) => {
+    if (isSpanishPhase) {
+      return `Día ${index + 1}`;
+    }
+    return `Day ${index + 1}`;
   };
 
   return (
@@ -141,7 +134,7 @@ export function CurrentWeekCard({
                       )}
                     </div>
                     <div>
-                      <p className="font-bold text-lg text-gray-800 mb-1">{getDayName(day.day)}</p>
+                      <p className="font-bold text-lg text-gray-800 mb-1">{getDayName(index)}</p>
                       <p className="text-base text-gray-600 font-semibold mb-1">{day.distance} km</p>
                       <p className="text-sm text-gray-500">{day.focus}</p>
                     </div>

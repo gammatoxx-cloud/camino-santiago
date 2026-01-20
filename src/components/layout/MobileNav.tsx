@@ -36,6 +36,7 @@ export function MobileNav() {
   }
 
   const handleNavClick = (path: string) => {
+    // Close sidebar immediately
     setIsOpen(false);
     
     // Admin always has access, skip plan check
@@ -46,7 +47,10 @@ export function MobileNav() {
       return;
     }
     
-    navigate(path);
+    // Only navigate if not already on this page
+    if (location.pathname !== path) {
+      navigate(path);
+    }
   };
 
   const handleBackdropClick = () => {
