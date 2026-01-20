@@ -8,7 +8,7 @@ import { SectionHeader } from '../components/ui/SectionHeader';
 import { PlanRestrictedContent } from '../components/plan/PlanRestrictedContent';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { getCurrentPhase, checkPhaseCompletion } from '../lib/trainingData';
+import { getCurrentPhase, checkPhaseCompletion, calculateCurrentWeekFromProgress } from '../lib/trainingData';
 import { calculateTotalScore, calculateWalkPoints } from '../lib/scoringUtils';
 import type { UserProfile, WalkCompletion, PhaseUnlock, PhaseCompletion, TrailCompletion, BookCompletion, MagnoliasHikeCompletion } from '../types';
 
@@ -27,6 +27,7 @@ export function TrainingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const hasNavigatedRef = useRef(false);
+  const isInitialLoad = useRef(true);
   const [currentWeekNumber, setCurrentWeekNumber] = useState(1);
 
   const loadData = useCallback(async () => {
@@ -55,23 +56,6 @@ export function TrainingPage() {
 
       setProfile(profileData);
 
-      // Start date tracking disabled - use current week number or default to week 1
-      const currentWeek = currentWeekNumber;
-
-      // Load completions for current week
-      const { data: completionsData, error: completionsError } = await supabase
-        .from('walk_completions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('week_number', currentWeek)
-        .order('day_of_week');
-
-      if (completionsError) throw completionsError;
-      
-      // Check again before setting state
-      if (hasNavigatedRef.current) return;
-      setCompletions(completionsData || []);
-
       // Load ALL completions for scoring (not just current week)
       const { data: allCompletionsData, error: allCompletionsError } = await supabase
         .from('walk_completions')
@@ -98,6 +82,27 @@ export function TrainingPage() {
       // Check again before setting state
       if (hasNavigatedRef.current) return;
       setPhaseUnlocks(unlocksData || []);
+
+      // Calculate and set current week based on progress
+      const calculatedWeek = calculateCurrentWeekFromProgress(
+        allCompletionsData || [],
+        unlocksData || []
+      );
+      setCurrentWeekNumber(calculatedWeek);
+
+      // Load completions for calculated current week
+      const { data: completionsData, error: completionsError } = await supabase
+        .from('walk_completions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('week_number', calculatedWeek)
+        .order('day_of_week');
+
+      if (completionsError) throw completionsError;
+      
+      // Check again before setting state
+      if (hasNavigatedRef.current) return;
+      setCompletions(completionsData || []);
 
       // Load phase completions
       const { data: phaseCompletionsData, error: phaseCompletionsError } = await supabase
@@ -165,6 +170,7 @@ export function TrainingPage() {
   useEffect(() => {
     // Reset navigation flag and state when user changes
     hasNavigatedRef.current = false;
+    isInitialLoad.current = true;
     setProfile(null);
     setCompletions([]);
     setAllCompletions([]);
@@ -174,6 +180,7 @@ export function TrainingPage() {
     setBookCompletions([]);
     setMagnoliasHikeCompletions([]);
     setError(null);
+    setCurrentWeekNumber(1); // Reset to 1, will be calculated from progress
     
     // Only load data when user is available
     if (user) {
@@ -185,9 +192,10 @@ export function TrainingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]); // Only depend on user.id to prevent re-running when user object reference changes
 
-  // Reload completions when current week changes
+  // Reload completions when current week changes (but not on initial load)
   useEffect(() => {
-    if (user && profile) {
+    if (user && profile && !isInitialLoad.current) {
+      // Only reload if this is a manual week change, not initial load
       const reloadCompletions = async () => {
         try {
           const { data: completionsData, error: completionsError } = await supabase
@@ -199,17 +207,6 @@ export function TrainingPage() {
 
           if (completionsError) throw completionsError;
           setCompletions(completionsData || []);
-
-          // Also reload all completions for scoring
-          const { data: allCompletionsData, error: allCompletionsError } = await supabase
-            .from('walk_completions')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('week_number', { ascending: true })
-            .order('day_of_week', { ascending: true });
-
-          if (allCompletionsError) throw allCompletionsError;
-          setAllCompletions(allCompletionsData || []);
         } catch (err: any) {
           console.error('Error reloading completions:', err);
         }
@@ -217,6 +214,13 @@ export function TrainingPage() {
       reloadCompletions();
     }
   }, [currentWeekNumber, user, profile]);
+  
+  // Mark initial load as complete after data is loaded
+  useEffect(() => {
+    if (!loading && profile) {
+      isInitialLoad.current = false;
+    }
+  }, [loading, profile]);
 
   const handleToggleCompletion = async (
     day: string,

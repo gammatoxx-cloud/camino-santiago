@@ -95,7 +95,7 @@ export function TeamList({ teams, loading, onDeleteTeam, onAddUser, onRemoveUser
                       {team.name || `Equipo ${team.id.slice(0, 8)}`}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {team.member_count} de {team.max_members} miembros
+                      {team.member_count} de {Math.max(team.max_members, 14)} miembros
                     </p>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 flex-shrink-0">

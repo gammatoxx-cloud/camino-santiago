@@ -370,6 +370,79 @@ export function getWeeksInPhase(phaseNumber: number): Week[] {
 }
 
 /**
+ * Calculate the current week based on user's completions and phase unlocks
+ * @param completions - All walk completions for the user
+ * @param phaseUnlocks - All phase unlocks for the user
+ * @returns The current week number (1-52)
+ */
+export function calculateCurrentWeekFromProgress(
+  completions: { week_number: number; day_of_week: string }[],
+  phaseUnlocks: { phase_number: number }[]
+): number {
+  // Group completions by week
+  const completionsByWeek = new Map<number, Set<string>>();
+  if (completions && completions.length > 0) {
+    for (const completion of completions) {
+      if (!completionsByWeek.has(completion.week_number)) {
+        completionsByWeek.set(completion.week_number, new Set());
+      }
+      completionsByWeek.get(completion.week_number)!.add(completion.day_of_week);
+    }
+  }
+
+  // Find the highest unlocked phase
+  let maxUnlockedPhase = 0;
+  if (phaseUnlocks && phaseUnlocks.length > 0) {
+    maxUnlockedPhase = Math.max(...phaseUnlocks.map(u => u.phase_number));
+  } else {
+    // If no phase unlocks, default to phase 1
+    maxUnlockedPhase = 1;
+  }
+
+  // Get all weeks in unlocked phases
+  const unlockedWeeks: number[] = [];
+  for (let phaseNum = 1; phaseNum <= maxUnlockedPhase; phaseNum++) {
+    const phase = getPhaseByNumber(phaseNum);
+    if (phase) {
+      unlockedWeeks.push(...phase.weeks);
+    }
+  }
+
+  if (unlockedWeeks.length === 0) {
+    return 1;
+  }
+
+  // Sort weeks in ascending order
+  unlockedWeeks.sort((a, b) => a - b);
+
+  // Find the first week that is not fully completed
+  for (const weekNum of unlockedWeeks) {
+    const week = getWeekByNumber(weekNum);
+    if (!week) continue;
+
+    const weekCompletions = completionsByWeek.get(weekNum) || new Set();
+    const totalDays = week.days.length;
+    const completedDays = weekCompletions.size;
+
+    // If week is not fully completed, this is the current week
+    if (completedDays < totalDays) {
+      return weekNum;
+    }
+  }
+
+  // If all unlocked weeks are complete, check if there's a next phase
+  if (maxUnlockedPhase < 5) {
+    const nextPhase = getPhaseByNumber(maxUnlockedPhase + 1);
+    if (nextPhase && nextPhase.weeks.length > 0) {
+      return Math.min(...nextPhase.weeks);
+    }
+  }
+
+  // If all weeks are complete or we're at the last phase, return the last unlocked week
+  return Math.max(...unlockedWeeks);
+}
+
+/**
  * Check if a specific phase is complete by verifying all weeks in that phase
  * have all their days completed
  */

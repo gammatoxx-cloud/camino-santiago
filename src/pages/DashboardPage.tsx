@@ -8,7 +8,7 @@ import { SectionHeader } from '../components/ui/SectionHeader';
 import { PlanRestrictedContent } from '../components/plan/PlanRestrictedContent';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { getCurrentPhase, getWeekByNumber } from '../lib/trainingData';
+import { getCurrentPhase, getWeekByNumber, calculateCurrentWeekFromProgress } from '../lib/trainingData';
 import { calculateTotalScore, calculateWalkPoints } from '../lib/scoringUtils';
 import { getUserTeam, getUserInvitations } from '../lib/teamMatching';
 import { videoSections, VideoSection } from '../lib/videoData';
@@ -20,7 +20,6 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [completions, setCompletions] = useState<WalkCompletion[]>([]);
   const [allCompletions, setAllCompletions] = useState<WalkCompletion[]>([]);
   const [phaseUnlocks, setPhaseUnlocks] = useState<PhaseUnlock[]>([]);
   const [trailCompletions, setTrailCompletions] = useState<TrailCompletion[]>([]);
@@ -53,21 +52,7 @@ export function DashboardPage() {
 
       setProfile(profileData);
 
-      // Calculate current week
-      const currentWeek = 1;
-
-      // Load completions for current week
-      const { data: completionsData, error: completionsError } = await supabase
-        .from('walk_completions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('week_number', currentWeek)
-        .order('day_of_week');
-
-      if (completionsError) throw completionsError;
-      setCompletions(completionsData || []);
-
-      // Load ALL completions for scoring
+      // Load ALL completions for scoring and current week calculation
       const { data: allCompletionsData, error: allCompletionsError } = await supabase
         .from('walk_completions')
         .select('*')
@@ -87,6 +72,8 @@ export function DashboardPage() {
 
       if (unlocksError) throw unlocksError;
       setPhaseUnlocks(unlocksData || []);
+
+      // Note: Completions for current week will be filtered from allCompletions in render
 
       // Load trail completions
       const { data: trailCompletionsData, error: trailCompletionsError } = await supabase
@@ -178,6 +165,40 @@ export function DashboardPage() {
     }
   };
 
+  // Calculate values - ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
+  // This ensures hooks are called in the same order on every render
+  const currentWeek = useMemo(() => {
+    return calculateCurrentWeekFromProgress(
+      allCompletions.map(c => ({ week_number: c.week_number, day_of_week: c.day_of_week })),
+      phaseUnlocks.map(u => ({ phase_number: u.phase_number }))
+    );
+  }, [allCompletions, phaseUnlocks]);
+  
+  // Filter completions for current week from all completions
+  const completionsForCurrentWeek = useMemo(() => {
+    return allCompletions.filter(c => c.week_number === currentWeek);
+  }, [allCompletions, currentWeek]);
+  
+  const currentPhase = useMemo(() => getCurrentPhase(currentWeek) || null, [currentWeek]);
+  const week = useMemo(() => getWeekByNumber(currentWeek), [currentWeek]);
+  const totalScore = useMemo(() => calculateTotalScore(allCompletions, phaseUnlocks, trailCompletions, bookCompletions, magnoliasHikeCompletions), [allCompletions, phaseUnlocks, trailCompletions, bookCompletions, magnoliasHikeCompletions]);
+  const walkPoints = useMemo(() => calculateWalkPoints(allCompletions), [allCompletions]);
+  
+  const completedWalksThisWeek = completionsForCurrentWeek.length;
+  const totalWalksThisWeek = week?.days.length || 0;
+  const weekProgress = totalWalksThisWeek > 0 ? (completedWalksThisWeek / totalWalksThisWeek) * 100 : 0;
+
+  const phaseProgress = useMemo(() => {
+    if (!currentPhase) return 0;
+    const phaseStartWeek = Math.min(...currentPhase.weeks);
+    const phaseEndWeek = Math.max(...currentPhase.weeks);
+    const weeksCompleted = currentWeek - phaseStartWeek + 1;
+    const totalWeeks = phaseEndWeek - phaseStartWeek + 1;
+    return (weeksCompleted / totalWeeks) * 100;
+  }, [currentPhase, currentWeek]);
+
+  const relevantVideoSection = useMemo(() => getRelevantVideoSection(currentWeek), [currentWeek]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-cream">
@@ -217,28 +238,6 @@ export function DashboardPage() {
       </div>
     );
   }
-
-  // Calculate values
-  const currentWeek = 1;
-  const currentPhase = getCurrentPhase(currentWeek) || null;
-  const week = getWeekByNumber(currentWeek);
-  const totalScore = calculateTotalScore(allCompletions, phaseUnlocks, trailCompletions, bookCompletions, magnoliasHikeCompletions);
-  const walkPoints = calculateWalkPoints(allCompletions);
-  
-  const completedWalksThisWeek = completions.length;
-  const totalWalksThisWeek = week?.days.length || 0;
-  const weekProgress = totalWalksThisWeek > 0 ? (completedWalksThisWeek / totalWalksThisWeek) * 100 : 0;
-
-  let phaseProgress = 0;
-  if (currentPhase) {
-    const phaseStartWeek = Math.min(...currentPhase.weeks);
-    const phaseEndWeek = Math.max(...currentPhase.weeks);
-    const weeksCompleted = currentWeek - phaseStartWeek + 1;
-    const totalWeeks = phaseEndWeek - phaseStartWeek + 1;
-    phaseProgress = (weeksCompleted / totalWeeks) * 100;
-  }
-
-  const relevantVideoSection = getRelevantVideoSection(currentWeek);
 
   return (
     <PlanRestrictedContent requiredPlan="basico" upgradeToPlan="basico">

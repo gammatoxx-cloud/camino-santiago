@@ -488,7 +488,7 @@ export function TeamPage() {
                           {teamMembers.length > 0 && (
                             <div className="mt-3">
                               <p className="text-sm font-medium text-gray-700 mb-2">
-                                Miembros del equipo ({teamMembers.length} de {invitation.team?.max_members || 'N/A'}):
+                                Miembros del equipo ({teamMembers.length} de {invitation.team ? Math.max(invitation.team.max_members, 14) : 'N/A'}):
                               </p>
                               <div className="flex flex-wrap gap-2">
                                 {teamMembers.map((member) => (
@@ -576,7 +576,7 @@ export function TeamPage() {
                     Tu Equipo: {userTeam.name || `Equipo ${userTeam.id.slice(0, 8)}`}
                   </h2>
                   <p className="text-gray-600">
-                    {userTeam.member_count} de {userTeam.max_members} miembros
+                    {userTeam.member_count} de {Math.max(userTeam.max_members, 14)} miembros
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -611,7 +611,7 @@ export function TeamPage() {
             </Card>
 
             {/* Nearby Users Card - Show when user has a team and can invite others */}
-            {userTeam.member_count < userTeam.max_members && (
+            {userTeam.member_count < Math.max(userTeam.max_members, 14) && (
               <Card variant="elevated" className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
