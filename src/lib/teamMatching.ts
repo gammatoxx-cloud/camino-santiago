@@ -3,6 +3,7 @@
  */
 
 import { supabase } from './supabase';
+import type { Database } from './database.types';
 import type { NearbyUser, Team, TeamMember, TeamWithMembers, TeamInvitation, TeamInvitationWithDetails, TeamJoinRequest, TeamJoinRequestWithDetails, UserProfile } from '../types';
 
 /**
@@ -489,12 +490,14 @@ export async function updateTeamName(
     }
 
     // Update the team name
+    const updateData: Database['public']['Tables']['teams']['Update'] = {
+      name: newName.trim() || null,
+      updated_at: new Date().toISOString(),
+    };
+    
     const { data: team, error: teamError } = await supabase
       .from('teams')
-      .update({
-        name: newName.trim() || null,
-        updated_at: new Date().toISOString(),
-      } as any)
+      .update(updateData)
       .eq('id', teamId)
       .select()
       .single();
