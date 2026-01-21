@@ -19,6 +19,7 @@ export interface Database {
           latitude: number | null
           longitude: number | null
           avatar_url: string | null
+          phone_number: string | null
           start_date: string
           user_plan: string | null
           created_at: string
@@ -32,6 +33,7 @@ export interface Database {
           latitude?: number | null
           longitude?: number | null
           avatar_url?: string | null
+          phone_number?: string | null
           start_date?: string
           user_plan?: string | null
           created_at?: string
@@ -45,6 +47,7 @@ export interface Database {
           latitude?: number | null
           longitude?: number | null
           avatar_url?: string | null
+          phone_number?: string | null
           start_date?: string
           user_plan?: string | null
           created_at?: string

@@ -8,6 +8,7 @@ export interface UserProfile {
   latitude: number | null;
   longitude: number | null;
   avatar_url: string | null;
+  phone_number: string | null;
   start_date: string; // ISO date string
   user_plan?: UserPlan;
   created_at: string;

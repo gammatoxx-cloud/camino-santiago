@@ -20,6 +20,7 @@ export function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [showAddUserModal, setShowAddUserModal] = useState<{ teamId: string; teamName: string } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadData();
@@ -91,6 +92,16 @@ export function AdminPage() {
     }
   };
 
+  // Filter users based on search query
+  const filteredUsers = users.filter((user) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      user.name?.toLowerCase().includes(query) ||
+      user.email?.toLowerCase().includes(query)
+    );
+  });
+
   return (
     <div className="min-h-screen bg-cream px-4 py-8 md:px-8">
       <div className="max-w-6xl mx-auto">
@@ -118,8 +129,60 @@ export function AdminPage() {
           </Card>
         )}
 
+        {/* Search Bar */}
+        <Card variant="elevated" className="mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1">
+              <label htmlFor="user-search" className="block text-sm font-medium text-gray-700 mb-2">
+                Buscar usuarios
+              </label>
+              <div className="relative">
+                <input
+                  id="user-search"
+                  type="text"
+                  placeholder="Buscar por nombre o email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-4 py-3 pl-10 rounded-xl border-2 border-gray-200 focus:border-teal focus:outline-none bg-white text-gray-800 placeholder-gray-400 min-h-[44px]"
+                />
+                <svg
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label="Limpiar búsqueda"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              {searchQuery && (
+                <p className="mt-2 text-sm text-gray-600">
+                  {filteredUsers.length === 1
+                    ? '1 usuario encontrado'
+                    : `${filteredUsers.length} usuarios encontrados`}
+                </p>
+              )}
+            </div>
+          </div>
+        </Card>
+
         {/* Users Section */}
-        <UserList users={users} loading={loading} onPlanUpdate={handleRefresh} onUserDelete={handleRefresh} />
+        <UserList users={filteredUsers} loading={loading} onPlanUpdate={handleRefresh} onUserDelete={handleRefresh} />
 
         {/* Teams Section */}
         <TeamList

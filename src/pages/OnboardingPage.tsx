@@ -16,6 +16,7 @@ export function OnboardingPage() {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [location, setLocation] = useState(''); // For backward compatibility display
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
@@ -147,7 +148,7 @@ export function OnboardingPage() {
   };
 
   const handleComplete = async () => {
-    if (!user || !name.trim() || !address.trim()) {
+    if (!user || !name.trim() || !address.trim() || !phoneNumber.trim()) {
       setError('Por favor completa todos los campos requeridos');
       return;
     }
@@ -188,6 +189,7 @@ export function OnboardingPage() {
         latitude: coordinates.latitude,
         longitude: coordinates.longitude,
         avatar_url: avatarUrl,
+        phone_number: phoneNumber.trim(),
         start_date: new Date().toISOString().split('T')[0], // Default to today (not used for tracking)
       };
       const { error: profileError } = await supabase
@@ -333,6 +335,23 @@ export function OnboardingPage() {
                 </p>
               </div>
               <div>
+                <label htmlFor="phone-number" className="block text-sm font-medium text-gray-700 mb-2">
+                  Número de Teléfono <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="phone-number"
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 text-base rounded-lg border-2 border-gray-200 focus:border-teal focus:outline-none bg-white/80"
+                  placeholder="+1 (555) 123-4567"
+                />
+                <p className="mt-2 text-xs text-gray-600 italic">
+                  Autorizo agregar este número al chat de WhatsApp del Programa.
+                </p>
+              </div>
+              <div>
                 <label htmlFor="profile-picture" className="block text-sm font-medium text-gray-700 mb-2">
                   Foto de Perfil <span className="text-gray-400">(Opcional)</span>
                 </label>
@@ -392,7 +411,7 @@ export function OnboardingPage() {
                 variant="primary"
                 size="lg"
                 className="flex-1"
-                disabled={!name.trim() || !address.trim() || geocoding || loading || !coordinates || !!geocodeError}
+                disabled={!name.trim() || !address.trim() || !phoneNumber.trim() || geocoding || loading || !coordinates || !!geocodeError}
               >
                 {loading ? 'Iniciando...' : 'Comenzar Entrenamiento'}
               </Button>

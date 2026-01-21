@@ -31,6 +31,7 @@ export function ProfilePage() {
   const [editName, setEditName] = useState('');
   const [editLocation, setEditLocation] = useState('');
   const [editAddress, setEditAddress] = useState('');
+  const [editPhoneNumber, setEditPhoneNumber] = useState('');
   const [geocoding, setGeocoding] = useState(false);
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
   const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -117,6 +118,7 @@ export function ProfilePage() {
       setEditName(typedProfile.name);
       setEditLocation(typedProfile.location || '');
       setEditAddress(typedProfile.address || typedProfile.location || '');
+      setEditPhoneNumber(typedProfile.phone_number || '');
       if (typedProfile.latitude && typedProfile.longitude) {
         setCoordinates({ latitude: typedProfile.latitude, longitude: typedProfile.longitude });
       }
@@ -208,6 +210,7 @@ export function ProfilePage() {
         latitude: finalCoordinates?.latitude || null,
         longitude: finalCoordinates?.longitude || null,
         avatar_url: finalAvatarUrl,
+        phone_number: editPhoneNumber.trim() || null,
         updated_at: new Date().toISOString(),
       };
       
@@ -226,6 +229,7 @@ export function ProfilePage() {
         latitude: finalCoordinates?.latitude || null,
         longitude: finalCoordinates?.longitude || null,
         avatar_url: finalAvatarUrl,
+        phone_number: editPhoneNumber.trim() || null,
       } : null);
       setEditing(false);
       setGeocodeError(null);
@@ -516,6 +520,12 @@ export function ProfilePage() {
                       <p className="text-xl font-semibold text-gray-800">{profile.location}</p>
                     </div>
                   )}
+                  {profile.phone_number && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-600 mb-2 uppercase tracking-wide">Teléfono</h3>
+                      <p className="text-xl font-semibold text-gray-800">{profile.phone_number}</p>
+                    </div>
+                  )}
                   {profile.latitude && profile.longitude && (
                     <div>
                       <h3 className="text-sm font-semibold text-gray-600 mb-2 uppercase tracking-wide">Coordenadas</h3>
@@ -669,6 +679,21 @@ export function ProfilePage() {
                   Tu dirección se usa para conectarte con compañeros de equipo cercanos. Solo se muestra la distancia aproximada a otros usuarios.
                 </p>
               </div>
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                  Número de Teléfono <span className="text-gray-400">(Opcional)</span>
+                </label>
+                <input
+                  type="tel"
+                  value={editPhoneNumber}
+                  onChange={(e) => setEditPhoneNumber(e.target.value)}
+                  className="w-full px-4 py-3 text-base rounded-xl border-2 border-gray-200 focus:border-teal focus:outline-none bg-white/90 focus:ring-2 focus:ring-teal/20"
+                  placeholder="+1 (555) 123-4567"
+                />
+                <p className="mt-2 text-xs text-gray-600 italic">
+                  Autorizo agregar este número al chat de WhatsApp del Programa.
+                </p>
+              </div>
               <div className="flex gap-4">
                 <Button
                   onClick={() => {
@@ -676,6 +701,7 @@ export function ProfilePage() {
                     setEditName(profile.name);
                     setEditLocation(profile.location || '');
                     setEditAddress(profile.address || profile.location || '');
+                    setEditPhoneNumber(profile.phone_number || '');
                     setGeocodeError(null);
                     setProfilePicture(null);
                     setPicturePreview(null);
