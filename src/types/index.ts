@@ -9,6 +9,7 @@ export interface UserProfile {
   longitude: number | null;
   avatar_url: string | null;
   phone_number: string | null;
+  email?: string | null; // Email from auth.users (only available for team members)
   start_date: string; // ISO date string
   user_plan?: UserPlan;
   created_at: string;

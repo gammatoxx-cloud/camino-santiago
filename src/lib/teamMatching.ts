@@ -319,6 +319,29 @@ export async function getUserTeams(userId: string): Promise<TeamWithMembers[]> {
 
     if (profilesError) throw profilesError;
 
+    // Get emails for all team members (fetch for each team)
+    const emailsByTeamId = new Map<string, Map<string, string>>();
+    await Promise.all(
+      ((teams || []) as Team[]).map(async (team) => {
+        try {
+          const { data: emailsData, error: emailsError } = await (supabase.rpc as any)(
+            'get_team_member_emails',
+            { team_id_param: team.id }
+          );
+          
+          if (!emailsError && emailsData) {
+            const emailMap = new Map<string, string>();
+            (emailsData || []).forEach((item: { user_id: string; email: string }) => {
+              emailMap.set(item.user_id, item.email);
+            });
+            emailsByTeamId.set(team.id, emailMap);
+          }
+        } catch (err) {
+          console.error(`Error fetching emails for team ${team.id}:`, err);
+        }
+      })
+    );
+
     // Create maps for quick lookup
     const profilesMap = new Map(((profilesData || []) as UserProfile[]).map(p => [p.id, p]));
     const membersByTeamId = new Map<string, TeamMember[]>();
@@ -332,12 +355,19 @@ export async function getUserTeams(userId: string): Promise<TeamWithMembers[]> {
     // Build TeamWithMembers array
     return ((teams || []) as Team[]).map(team => {
       const members = membersByTeamId.get(team.id) || [];
+      const teamEmailsMap = emailsByTeamId.get(team.id) || new Map<string, string>();
+      
       return {
         ...team,
-        members: members.map(m => ({
-          ...m,
-          profile: profilesMap.get(m.user_id) as UserProfile | undefined,
-        })) as (TeamMember & { profile?: UserProfile })[],
+        members: members.map(m => {
+          const profile = profilesMap.get(m.user_id) as UserProfile | undefined;
+          const email = teamEmailsMap.get(m.user_id);
+          
+          return {
+            ...m,
+            profile: profile ? { ...profile, email: email || null } : undefined,
+          };
+        }) as (TeamMember & { profile?: UserProfile })[],
         member_count: members.length,
       };
     });
@@ -385,13 +415,32 @@ export async function getTeamMembersByTeamId(teamId: string): Promise<(TeamMembe
 
     if (profilesError) throw profilesError;
 
-    // Create a map for quick profile lookup
-    const profilesMap = new Map(((profilesData || []) as UserProfile[]).map(p => [p.id, p]));
+    // Get emails for team members using the database function
+    const { data: emailsData, error: emailsError } = await (supabase.rpc as any)(
+      'get_team_member_emails',
+      { team_id_param: teamId }
+    );
 
-    return (members || []).map(m => ({
-      ...(m as TeamMember),
-      profile: profilesMap.get((m as TeamMember).user_id) as UserProfile | undefined,
-    })) as (TeamMember & { profile?: UserProfile })[];
+    // Create maps for quick lookup
+    const profilesMap = new Map(((profilesData || []) as UserProfile[]).map(p => [p.id, p]));
+    const emailsMap = new Map<string, string>();
+    
+    if (!emailsError && emailsData) {
+      (emailsData || []).forEach((item: { user_id: string; email: string }) => {
+        emailsMap.set(item.user_id, item.email);
+      });
+    }
+
+    // Merge profiles with emails
+    return (members || []).map(m => {
+      const profile = profilesMap.get((m as TeamMember).user_id) as UserProfile | undefined;
+      const email = emailsMap.get((m as TeamMember).user_id);
+      
+      return {
+        ...(m as TeamMember),
+        profile: profile ? { ...profile, email: email || null } : undefined,
+      };
+    }) as (TeamMember & { profile?: UserProfile })[];
   } catch (error: any) {
     console.error('Error getting team members:', error);
     throw new Error(error.message || 'Failed to get team members');
@@ -444,12 +493,22 @@ export async function createTeam(
       .eq('id', userId)
       .single();
 
+    // Get email for the creator
+    const { data: emailsData } = await (supabase.rpc as any)(
+      'get_team_member_emails',
+      { team_id_param: (team as Team).id }
+    );
+    
+    const email = emailsData && emailsData.length > 0 
+      ? emailsData.find((item: { user_id: string }) => item.user_id === userId)?.email 
+      : null;
+
     return {
       ...(team as Team),
       members: [
         {
           ...(member as TeamMember),
-          profile: profile ? (profile as UserProfile) : undefined,
+          profile: profile ? { ...(profile as UserProfile), email: email || null } : undefined,
         },
       ] as (TeamMember & { profile?: UserProfile })[],
       member_count: 1,
@@ -521,15 +580,33 @@ export async function updateTeamName(
 
     if (profilesError) throw profilesError;
 
-    // Create a map for quick profile lookup
+    // Get emails for team members using the database function
+    const { data: emailsData, error: emailsError } = await (supabase.rpc as any)(
+      'get_team_member_emails',
+      { team_id_param: teamId }
+    );
+
+    // Create maps for quick lookup
     const profilesMap = new Map(((profilesData || []) as UserProfile[]).map(p => [p.id, p]));
+    const emailsMap = new Map<string, string>();
+    
+    if (!emailsError && emailsData) {
+      (emailsData || []).forEach((item: { user_id: string; email: string }) => {
+        emailsMap.set(item.user_id, item.email);
+      });
+    }
 
     return {
       ...(team as Team),
-      members: ((allMembers || []) as TeamMember[]).map(m => ({
-        ...m,
-        profile: profilesMap.get(m.user_id) as UserProfile | undefined,
-      })) as (TeamMember & { profile?: UserProfile })[],
+      members: ((allMembers || []) as TeamMember[]).map(m => {
+        const profile = profilesMap.get(m.user_id) as UserProfile | undefined;
+        const email = emailsMap.get(m.user_id);
+        
+        return {
+          ...m,
+          profile: profile ? { ...profile, email: email || null } : undefined,
+        };
+      }) as (TeamMember & { profile?: UserProfile })[],
       member_count: (allMembers || []).length,
     };
   } catch (error: any) {
@@ -607,15 +684,33 @@ export async function joinTeam(userId: string, teamId: string): Promise<TeamWith
 
     if (profilesError) throw profilesError;
 
-    // Create a map for quick profile lookup
+    // Get emails for team members using the database function
+    const { data: emailsData, error: emailsError } = await (supabase.rpc as any)(
+      'get_team_member_emails',
+      { team_id_param: teamId }
+    );
+
+    // Create maps for quick lookup
     const profilesMap = new Map(((profilesData || []) as UserProfile[]).map(p => [p.id, p]));
+    const emailsMap = new Map<string, string>();
+    
+    if (!emailsError && emailsData) {
+      (emailsData || []).forEach((item: { user_id: string; email: string }) => {
+        emailsMap.set(item.user_id, item.email);
+      });
+    }
 
     return {
       ...(team as Team),
-      members: ((allMembers || []) as TeamMember[]).map(m => ({
-        ...m,
-        profile: profilesMap.get(m.user_id) as UserProfile | undefined,
-      })) as (TeamMember & { profile?: UserProfile })[],
+      members: ((allMembers || []) as TeamMember[]).map(m => {
+        const profile = profilesMap.get(m.user_id) as UserProfile | undefined;
+        const email = emailsMap.get(m.user_id);
+        
+        return {
+          ...m,
+          profile: profile ? { ...profile, email: email || null } : undefined,
+        };
+      }) as (TeamMember & { profile?: UserProfile })[],
       member_count: (allMembers || []).length,
     };
   } catch (error: any) {
