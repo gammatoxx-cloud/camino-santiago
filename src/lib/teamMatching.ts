@@ -497,7 +497,7 @@ export async function updateTeamName(
     
     const { data: team, error: teamError } = await supabase
       .from('teams')
-      .update(updateData)
+      .update<Database['public']['Tables']['teams']['Update']>(updateData)
       .eq('id', teamId)
       .select()
       .single();
