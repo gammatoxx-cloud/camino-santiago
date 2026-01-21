@@ -12,6 +12,7 @@ import {
   findAvailableTeams,
   getUserTeams,
   createTeam,
+  updateTeamName,
   joinTeam,
   leaveTeam,
   deleteTeam,
@@ -52,6 +53,9 @@ export function TeamPage() {
   const [newTeamName, setNewTeamName] = useState('');
   const [acceptingRequestId, setAcceptingRequestId] = useState<string | null>(null);
   const [decliningRequestId, setDecliningRequestId] = useState<string | null>(null);
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
+  const [editedTeamName, setEditedTeamName] = useState('');
+  const [updatingTeamName, setUpdatingTeamName] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -472,6 +476,38 @@ export function TeamPage() {
     }
   };
 
+  const handleStartEditTeamName = (teamId: string, currentName: string) => {
+    setEditingTeamId(teamId);
+    setEditedTeamName(currentName || '');
+  };
+
+  const handleCancelEditTeamName = () => {
+    setEditingTeamId(null);
+    setEditedTeamName('');
+  };
+
+  const handleSaveTeamName = async (teamId: string) => {
+    if (!user) return;
+
+    try {
+      setError(null);
+      setUpdatingTeamName(true);
+      const updatedTeam = await updateTeamName(user.id, teamId, editedTeamName);
+      
+      // Update the team in userTeams array
+      setUserTeams(prevTeams => 
+        prevTeams.map(team => team.id === teamId ? updatedTeam : team)
+      );
+      
+      setEditingTeamId(null);
+      setEditedTeamName('');
+    } catch (err: any) {
+      setError(err.message || 'Error al actualizar el nombre del equipo.');
+    } finally {
+      setUpdatingTeamName(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-cream px-4 py-8 md:px-8">
@@ -630,10 +666,66 @@ export function TeamPage() {
                 <div key={team.id} className="mb-6 space-y-4">
                   <Card variant="elevated">
                     <div className="flex flex-col md:flex-row md:justify-between items-start mb-4 gap-4 md:gap-0">
-                      <div>
-                        <h2 className="text-2xl font-bold text-teal mb-2">
-                          {team.name || `Equipo ${team.id.slice(0, 8)}`}
-                        </h2>
+                      <div className="flex-1 min-w-0">
+                        {editingTeamId === team.id ? (
+                          <div className="space-y-3">
+                            <input
+                              type="text"
+                              value={editedTeamName}
+                              onChange={(e) => setEditedTeamName(e.target.value)}
+                              className="w-full px-4 py-2 text-2xl font-bold text-teal rounded-lg border-2 border-teal focus:border-teal focus:outline-none bg-white/80"
+                              placeholder="Nombre del equipo"
+                              autoFocus
+                              disabled={updatingTeamName}
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() => handleSaveTeamName(team.id)}
+                                disabled={updatingTeamName}
+                              >
+                                {updatingTeamName ? 'Guardando...' : 'Guardar'}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleCancelEditTeamName}
+                                disabled={updatingTeamName}
+                              >
+                                Cancelar
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h2 className="text-2xl font-bold text-teal mb-2">
+                              {team.name || `Equipo ${team.id.slice(0, 8)}`}
+                            </h2>
+                            {isLeader && (
+                              <button
+                                onClick={() => handleStartEditTeamName(team.id, team.name || '')}
+                                className="p-2 text-gray-400 hover:text-teal transition-colors"
+                                aria-label="Editar nombre del equipo"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-5 w-5"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                  />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        )}
                         <p className="text-gray-600">
                           {team.member_count} de {Math.max(team.max_members, 14)} miembros
                         </p>
@@ -644,6 +736,7 @@ export function TeamPage() {
                             variant="secondary"
                             size="sm"
                             onClick={() => handleDeleteTeam(team.id)}
+                            disabled={editingTeamId === team.id}
                           >
                             Eliminar Equipo
                           </Button>
@@ -652,6 +745,7 @@ export function TeamPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleLeaveTeam(team.id)}
+                          disabled={editingTeamId === team.id}
                         >
                           Salir del Equipo
                         </Button>

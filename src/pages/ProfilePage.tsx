@@ -830,7 +830,7 @@ export function ProfilePage() {
                 }`}>
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-xl font-bold text-teal">Plan Completo</h4>
-                    <span className="text-2xl font-bold text-gray-900">$25</span>
+                    <span className="text-2xl font-bold text-gray-900">$24</span>
                   </div>
                   <p className="text-sm text-gray-600 mb-4">/mes</p>
                   

@@ -460,6 +460,82 @@ export async function createTeam(
 }
 
 /**
+ * Update team name (only team leaders can do this)
+ * @param userId - The user updating the team (must be a team leader)
+ * @param teamId - The team ID to update
+ * @param newName - The new team name (can be empty string to remove name)
+ * @returns Updated team with members
+ */
+export async function updateTeamName(
+  userId: string,
+  teamId: string,
+  newName: string
+): Promise<TeamWithMembers> {
+  try {
+    // First verify the user is a team leader
+    const { data: memberCheck, error: memberCheckError } = await supabase
+      .from('team_members')
+      .select('role')
+      .eq('team_id', teamId)
+      .eq('user_id', userId)
+      .single();
+
+    if (memberCheckError || !memberCheck) {
+      throw new Error('No tienes permiso para editar este equipo');
+    }
+
+    if ((memberCheck as { role: string }).role !== 'leader') {
+      throw new Error('Solo los líderes del equipo pueden editar el nombre');
+    }
+
+    // Update the team name
+    const { data: team, error: teamError } = await supabase
+      .from('teams')
+      .update({
+        name: newName.trim() || null,
+        updated_at: new Date().toISOString(),
+      } as any)
+      .eq('id', teamId)
+      .select()
+      .single();
+
+    if (teamError) throw teamError;
+
+    // Get all team members
+    const { data: allMembers, error: allMembersError } = await supabase
+      .from('team_members')
+      .select('*')
+      .eq('team_id', teamId);
+
+    if (allMembersError) throw allMembersError;
+
+    // Get profiles separately
+    const memberUserIds = ((allMembers || []) as TeamMember[]).map(m => m.user_id);
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('*')
+      .in('id', memberUserIds);
+
+    if (profilesError) throw profilesError;
+
+    // Create a map for quick profile lookup
+    const profilesMap = new Map(((profilesData || []) as UserProfile[]).map(p => [p.id, p]));
+
+    return {
+      ...(team as Team),
+      members: ((allMembers || []) as TeamMember[]).map(m => ({
+        ...m,
+        profile: profilesMap.get(m.user_id) as UserProfile | undefined,
+      })) as (TeamMember & { profile?: UserProfile })[],
+      member_count: (allMembers || []).length,
+    };
+  } catch (error: any) {
+    console.error('Error updating team name:', error);
+    throw new Error(error.message || 'Failed to update team name');
+  }
+}
+
+/**
  * Join a team
  * @param userId - The user joining the team
  * @param teamId - The team ID to join

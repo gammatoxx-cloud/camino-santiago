@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthForm } from '../components/auth/AuthForm';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -8,6 +8,9 @@ import { isAdmin } from '../lib/admin';
 export function AuthPage() {
   const navigate = useNavigate();
   const { user, signUp, signIn } = useAuth();
+  const [searchParams] = useSearchParams();
+  const modeParam = searchParams.get('mode');
+  const defaultMode = modeParam === 'signup' ? 'signup' : 'signin';
 
   useEffect(() => {
     if (user) {
@@ -72,7 +75,11 @@ export function AuthPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-20 bg-cream">
       <div className="w-full max-w-md">
-        <AuthForm onSignUp={handleSignUp} onSignIn={handleSignIn} />
+        <AuthForm
+          onSignUp={handleSignUp}
+          onSignIn={handleSignIn}
+          defaultMode={defaultMode}
+        />
       </div>
     </div>
   );

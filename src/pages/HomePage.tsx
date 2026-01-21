@@ -39,9 +39,9 @@ export function HomePage() {
                   </Link>
                 ) : (
                   <>
-                    <Link to="/auth">
+                    <Link to="/auth?mode=signup">
                       <Button variant="primary" size="lg">
-                        Comienza Tu Viaje
+                        Regístrate
                       </Button>
                     </Link>
                     <Link to="/auth">

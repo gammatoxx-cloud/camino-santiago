@@ -5,6 +5,7 @@ import { Card } from '../ui/Card';
 interface AuthFormProps {
   onSignUp: (email: string, password: string) => Promise<{ error: any }>;
   onSignIn: (email: string, password: string) => Promise<{ error: any }>;
+  defaultMode?: 'signup' | 'signin';
 }
 
 interface PasswordRequirements {
@@ -12,6 +13,7 @@ interface PasswordRequirements {
   hasLowercase: boolean;
   hasUppercase: boolean;
   hasDigit: boolean;
+  hasSymbol: boolean;
 }
 
 const validatePassword = (password: string): PasswordRequirements => {
@@ -20,6 +22,7 @@ const validatePassword = (password: string): PasswordRequirements => {
     hasLowercase: /[a-z]/.test(password),
     hasUppercase: /[A-Z]/.test(password),
     hasDigit: /[0-9]/.test(password),
+    hasSymbol: /[^A-Za-z0-9]/.test(password),
   };
 };
 
@@ -28,12 +31,13 @@ const isPasswordValid = (requirements: PasswordRequirements): boolean => {
     requirements.minLength &&
     requirements.hasLowercase &&
     requirements.hasUppercase &&
-    requirements.hasDigit
+    requirements.hasDigit &&
+    requirements.hasSymbol
   );
 };
 
-export function AuthForm({ onSignUp, onSignIn }: AuthFormProps) {
-  const [isSignUp, setIsSignUp] = useState(false);
+export function AuthForm({ onSignUp, onSignIn, defaultMode = 'signin' }: AuthFormProps) {
+  const [isSignUp, setIsSignUp] = useState(defaultMode === 'signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -326,6 +330,46 @@ export function AuthForm({ onSignUp, onSignIn }: AuthFormProps) {
                     }
                   >
                     Un dígito
+                  </span>
+                </div>
+                <div className="flex items-center text-sm">
+                  {passwordRequirements.hasSymbol ? (
+                    <svg
+                      className="h-4 w-4 text-green-600 mr-2 flex-shrink-0"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  )}
+                  <span
+                    className={
+                      passwordRequirements.hasSymbol
+                        ? 'text-green-700'
+                        : 'text-gray-600'
+                    }
+                  >
+                    Un caracter especial (!@#$%^&amp;*)
                   </span>
                 </div>
               </div>

@@ -292,6 +292,18 @@ CREATE POLICY "Users can create teams" ON teams FOR INSERT
 CREATE POLICY "Users can update own teams" ON teams FOR UPDATE 
   USING (auth.uid() = created_by);
 
+-- Team leaders can update their teams
+CREATE POLICY "Team leaders can update teams" ON teams FOR UPDATE 
+  USING (
+    EXISTS (
+      SELECT 1 
+      FROM team_members tm
+      WHERE tm.team_id = teams.id
+      AND tm.user_id = auth.uid()
+      AND tm.role = 'leader'
+    )
+  );
+
 -- Team creators can delete their teams
 CREATE POLICY "Users can delete own teams" ON teams FOR DELETE 
   USING (auth.uid() = created_by);
