@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserPlan } from '../../hooks/useUserPlan';
 import { hasPlanAccess } from '../../lib/userPlans';
@@ -20,7 +19,6 @@ export function PlanRestrictedContent({
   children,
   className = '',
 }: PlanRestrictedContentProps) {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { plan, loading } = useUserPlan();
   const [showOverlay] = useState(true);
@@ -68,8 +66,8 @@ export function PlanRestrictedContent({
         <BlurOverlay
           upgradeToPlan={upgradeToPlan}
           onUpgrade={() => {
-            // Navigate to subscription page
-            navigate('/subscription');
+            // Open payment link in new tab (same as Profile section)
+            window.open('https://www.magnoliasusa.org/pricing-plans/planes', '_blank');
           }}
         />
       )}

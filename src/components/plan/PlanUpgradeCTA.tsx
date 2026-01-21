@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import type { UserPlan } from '../../types';
 
@@ -36,14 +35,12 @@ export function PlanUpgradeCTA({
   className = '',
   variant = 'button',
 }: PlanUpgradeCTAProps) {
-  const navigate = useNavigate();
   const planName = PLAN_NAMES[upgradeToPlan];
   const benefits = PLAN_BENEFITS[upgradeToPlan];
 
   const handleUpgrade = () => {
-    // Navigate to subscription page or show upgrade modal
-    // For now, we'll navigate to subscription page
-    navigate('/subscription');
+    // Open payment link in new tab (same as Profile section)
+    window.open('https://www.magnoliasusa.org/pricing-plans/planes', '_blank');
   };
 
   if (variant === 'inline') {
