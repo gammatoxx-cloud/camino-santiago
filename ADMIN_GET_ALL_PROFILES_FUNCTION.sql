@@ -2,6 +2,9 @@
 -- This function bypasses RLS and returns all profiles for the admin
 -- Run this in your Supabase SQL Editor
 
+-- Drop the existing function first (required when changing return type)
+DROP FUNCTION IF EXISTS admin_get_all_profiles();
+
 CREATE OR REPLACE FUNCTION admin_get_all_profiles()
 RETURNS TABLE (
   id UUID,
@@ -11,6 +14,7 @@ RETURNS TABLE (
   latitude DECIMAL,
   longitude DECIMAL,
   avatar_url TEXT,
+  phone_number TEXT,
   start_date DATE,
   user_plan TEXT,
   created_at TIMESTAMPTZ,
@@ -48,6 +52,7 @@ BEGIN
     profiles.latitude,
     profiles.longitude,
     profiles.avatar_url,
+    profiles.phone_number,
     profiles.start_date,
     COALESCE(profiles.user_plan, 'gratis')::TEXT as user_plan,
     profiles.created_at,

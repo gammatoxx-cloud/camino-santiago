@@ -98,7 +98,9 @@ export function AdminPage() {
     const query = searchQuery.toLowerCase();
     return (
       user.name?.toLowerCase().includes(query) ||
-      user.email?.toLowerCase().includes(query)
+      user.email?.toLowerCase().includes(query) ||
+      user.phone_number?.toLowerCase().includes(query) ||
+      user.address?.toLowerCase().includes(query)
     );
   });
 
@@ -140,7 +142,7 @@ export function AdminPage() {
                 <input
                   id="user-search"
                   type="text"
-                  placeholder="Buscar por nombre o email..."
+                  placeholder="Buscar por nombre, email, teléfono o dirección..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full px-4 py-3 pl-10 rounded-xl border-2 border-gray-200 focus:border-teal focus:outline-none bg-white text-gray-800 placeholder-gray-400 min-h-[44px]"

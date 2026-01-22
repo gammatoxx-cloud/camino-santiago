@@ -118,6 +118,17 @@ export function UserList({ users, loading, onPlanUpdate, onUserDelete }: UserLis
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-800 truncate">{user.name}</p>
                     <p className="text-sm text-gray-600 truncate">{user.email}</p>
+                    {user.phone_number && (
+                      <p className="text-sm text-gray-600 truncate">
+                        <span className="font-medium">Tel:</span> {user.phone_number}
+                      </p>
+                    )}
+                    {user.address && (
+                      <p className="text-sm text-gray-600 truncate">{user.address}</p>
+                    )}
+                    {!user.phone_number && !user.address && (
+                      <p className="text-xs text-gray-400 italic">Sin teléfono ni dirección</p>
+                    )}
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 flex-shrink-0">
                     <div className="text-right">
