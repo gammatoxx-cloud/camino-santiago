@@ -1426,7 +1426,8 @@ export async function getAllTeams(): Promise<TeamWithMembers[]> {
     const profilesMap = new Map(((profilesData || []) as UserProfile[]).map(p => [p.id, p]));
 
     // Combine teams with their members
-    return (teams || []).map(team => {
+    const typedTeams = (teams || []) as Team[];
+    return typedTeams.map((team: Team) => {
       const members = ((allMembers || []) as TeamMember[])
         .filter(m => m.team_id === team.id)
         .map(m => {
@@ -1441,7 +1442,7 @@ export async function getAllTeams(): Promise<TeamWithMembers[]> {
         }) as (TeamMember & { profile?: UserProfile })[];
 
       return {
-        ...(team as Team),
+        ...team,
         members,
         member_count: members.length,
       };
