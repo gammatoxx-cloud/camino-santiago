@@ -1417,8 +1417,8 @@ export async function getAllTeams(): Promise<TeamWithMembers[]> {
     const phoneNumbersByTeamId = new Map<string, Map<string, string | null>>();
     
     // Check which teams the current user is a member of
-    const { data: currentUser } = await supabase.auth.getUser();
-    const userId = currentUser?.data?.user?.id;
+    const { data: currentUserData } = await supabase.auth.getUser();
+    const userId = currentUserData?.user?.id;
     let userTeamIds = new Set<string>();
     
     if (userId) {
@@ -1427,7 +1427,7 @@ export async function getAllTeams(): Promise<TeamWithMembers[]> {
         .select('team_id')
         .eq('user_id', userId);
       
-      userTeamIds = new Set((userMemberships || []).map(m => m.team_id));
+      userTeamIds = new Set(((userMemberships || []) as { team_id: string }[]).map((m: { team_id: string }) => m.team_id));
       
       // Only fetch emails/phone for teams the user is in
       await Promise.all(
