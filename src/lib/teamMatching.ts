@@ -36,7 +36,7 @@ export async function findNearbyUsers(
         id: user.id,
         name: user.name,
         location: user.location,
-        address: user.address,
+        address: null, // Addresses are private and not visible to other users
         latitude: user.latitude,
         longitude: user.longitude,
         avatar_url: null, // Not returned by function
@@ -227,11 +227,11 @@ export async function findAvailableTeams(
 
     if (allMembersError) throw allMembersError;
 
-    // Get profiles separately to avoid PostgREST foreign key expansion issues
+    // Get profiles separately to avoid PostgREST foreign key expansion issues (excluding address for privacy)
     const userIds = [...new Set((allTeamMembers || []).map((tm: TeamMember) => tm.user_id))];
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, name, location, latitude, longitude, avatar_url, phone_number, start_date, created_at, updated_at, user_plan')
       .in('id', userIds);
 
     if (profilesError) throw profilesError;
@@ -310,11 +310,11 @@ export async function getUserTeams(userId: string): Promise<TeamWithMembers[]> {
 
     if (allMembersError) throw allMembersError;
 
-    // Get all profiles for all members
+    // Get all profiles for all members (excluding address for privacy)
     const memberUserIds = [...new Set(((allMembers || []) as TeamMember[]).map(m => m.user_id))];
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, name, location, latitude, longitude, avatar_url, phone_number, start_date, created_at, updated_at, user_plan')
       .in('id', memberUserIds);
 
     if (profilesError) throw profilesError;
@@ -406,11 +406,11 @@ export async function getTeamMembersByTeamId(teamId: string): Promise<(TeamMembe
       return [];
     }
 
-    // Get profiles separately
+    // Get profiles separately (excluding address for privacy)
     const memberUserIds = ((members || []) as TeamMember[]).map(m => m.user_id);
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, name, location, latitude, longitude, avatar_url, phone_number, start_date, created_at, updated_at, user_plan')
       .in('id', memberUserIds);
 
     if (profilesError) throw profilesError;
@@ -675,11 +675,11 @@ export async function joinTeam(userId: string, teamId: string): Promise<TeamWith
 
     if (allMembersError) throw allMembersError;
 
-    // Get profiles separately
+    // Get profiles separately (excluding address for privacy)
     const memberUserIds = ((allMembers || []) as TeamMember[]).map(m => m.user_id);
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, name, location, latitude, longitude, avatar_url, phone_number, start_date, created_at, updated_at, user_plan')
       .in('id', memberUserIds);
 
     if (profilesError) throw profilesError;
@@ -902,11 +902,11 @@ export async function getUserInvitations(userId: string): Promise<TeamInvitation
 
     if (teamsError) throw teamsError;
 
-    // Get inviter profiles
+    // Get inviter profiles (excluding address for privacy)
     const inviterIds = [...new Set(typedInvitations.map(inv => inv.invited_by))];
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, name, location, latitude, longitude, avatar_url, phone_number, start_date, created_at, updated_at, user_plan')
       .in('id', inviterIds);
 
     if (profilesError) throw profilesError;
@@ -1157,11 +1157,11 @@ export async function getTeamJoinRequests(
       return [];
     }
 
-    // Get requester profiles
+    // Get requester profiles (excluding address for privacy)
     const requesterIds = [...new Set(typedRequests.map(req => req.requested_by))];
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, name, location, latitude, longitude, avatar_url, phone_number, start_date, created_at, updated_at, user_plan')
       .in('id', requesterIds);
 
     if (profilesError) throw profilesError;
@@ -1280,24 +1280,42 @@ export async function acceptJoinRequest(
 
     if (allMembersError) throw allMembersError;
 
-    // Get profiles separately
+    // Get profiles separately (excluding address for privacy)
     const memberUserIds = ((allMembers || []) as TeamMember[]).map(m => m.user_id);
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, name, location, latitude, longitude, avatar_url, phone_number, start_date, created_at, updated_at, user_plan')
       .in('id', memberUserIds);
 
     if (profilesError) throw profilesError;
 
-    // Create a map for quick profile lookup
+    // Get emails for team members using the database function
+    const { data: emailsData, error: emailsError } = await (supabase.rpc as any)(
+      'get_team_member_emails',
+      { team_id_param: teamId }
+    );
+
+    // Create maps for quick lookup
     const profilesMap = new Map(((profilesData || []) as UserProfile[]).map(p => [p.id, p]));
+    const emailsMap = new Map<string, string>();
+    
+    if (!emailsError && emailsData) {
+      (emailsData || []).forEach((item: { user_id: string; email: string }) => {
+        emailsMap.set(item.user_id, item.email);
+      });
+    }
 
     return {
       ...(team as Team),
-      members: ((allMembers || []) as TeamMember[]).map(m => ({
-        ...m,
-        profile: profilesMap.get(m.user_id) as UserProfile | undefined,
-      })) as (TeamMember & { profile?: UserProfile })[],
+      members: ((allMembers || []) as TeamMember[]).map(m => {
+        const profile = profilesMap.get(m.user_id) as UserProfile | undefined;
+        const email = emailsMap.get(m.user_id);
+        
+        return {
+          ...m,
+          profile: profile ? { ...profile, email: email || null } : undefined,
+        };
+      }) as (TeamMember & { profile?: UserProfile })[],
       member_count: (allMembers || []).length,
     };
   } catch (error: any) {
@@ -1344,6 +1362,93 @@ export async function declineJoinRequest(
   } catch (error: any) {
     console.error('Error declining join request:', error);
     throw new Error(error.message || 'Error al rechazar la solicitud');
+  }
+}
+
+/**
+ * Get all teams in the system with their members
+ * @returns Array of all teams with members
+ */
+export async function getAllTeams(): Promise<TeamWithMembers[]> {
+  try {
+    // Get all teams
+    const { data: teams, error: teamsError } = await supabase
+      .from('teams')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (teamsError) throw teamsError;
+    if (!teams || teams.length === 0) return [];
+
+    const teamIds = (teams || []).map(t => (t as Team).id);
+
+    // Get all team members for these teams
+    const { data: allMembers, error: allMembersError } = await supabase
+      .from('team_members')
+      .select('*')
+      .in('team_id', teamIds);
+
+    if (allMembersError) throw allMembersError;
+
+    // Get all profiles for all members (excluding address for privacy)
+    const memberUserIds = [...new Set(((allMembers || []) as TeamMember[]).map(m => m.user_id))];
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, name, location, latitude, longitude, avatar_url, phone_number, start_date, created_at, updated_at, user_plan')
+      .in('id', memberUserIds);
+
+    if (profilesError) throw profilesError;
+
+    // Get emails for all team members
+    const emailsByTeamId = new Map<string, Map<string, string>>();
+    await Promise.all(
+      teamIds.map(async (teamId) => {
+        try {
+          const { data: emailsData, error: emailsError } = await (supabase.rpc as any)(
+            'get_team_member_emails',
+            { team_id_param: teamId }
+          );
+          
+          if (!emailsError && emailsData) {
+            const emailsMap = new Map<string, string>();
+            (emailsData || []).forEach((item: { user_id: string; email: string }) => {
+              emailsMap.set(item.user_id, item.email);
+            });
+            emailsByTeamId.set(teamId, emailsMap);
+          }
+        } catch (err) {
+          console.error(`Error loading emails for team ${teamId}:`, err);
+        }
+      })
+    );
+
+    // Create maps for quick lookup
+    const profilesMap = new Map(((profilesData || []) as UserProfile[]).map(p => [p.id, p]));
+
+    // Combine teams with their members
+    return (teams || []).map(team => {
+      const members = ((allMembers || []) as TeamMember[])
+        .filter(m => m.team_id === team.id)
+        .map(m => {
+          const profile = profilesMap.get(m.user_id) as UserProfile | undefined;
+          const emailsMap = emailsByTeamId.get(team.id);
+          const email = emailsMap?.get(m.user_id);
+          
+          return {
+            ...m,
+            profile: profile ? { ...profile, email: email || null } : undefined,
+          };
+        }) as (TeamMember & { profile?: UserProfile })[];
+
+      return {
+        ...(team as Team),
+        members,
+        member_count: members.length,
+      };
+    });
+  } catch (error: any) {
+    console.error('Error getting all teams:', error);
+    throw new Error(error.message || 'Failed to get all teams');
   }
 }
 

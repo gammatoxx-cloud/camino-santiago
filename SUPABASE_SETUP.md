@@ -424,6 +424,7 @@ CREATE POLICY "Team leaders can update join requests" ON team_join_requests FOR 
   );
 
 -- Function to find users within a radius (in meters, converts miles to meters)
+-- Note: Address field is excluded for privacy - addresses are only visible to the user themselves
 CREATE OR REPLACE FUNCTION find_users_within_radius(
   user_lat DECIMAL,
   user_lng DECIMAL,
@@ -433,7 +434,7 @@ RETURNS TABLE (
   id UUID,
   name TEXT,
   location TEXT,
-  address TEXT,
+  -- address TEXT, -- REMOVED: Addresses are private and should not be visible to other users
   latitude DECIMAL,
   longitude DECIMAL,
   distance_miles DECIMAL
@@ -444,7 +445,7 @@ BEGIN
     p.id,
     p.name,
     p.location,
-    p.address,
+    -- p.address, -- REMOVED: Addresses are private and should not be visible to other users
     p.latitude,
     p.longitude,
     (

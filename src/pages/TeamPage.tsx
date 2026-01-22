@@ -11,6 +11,7 @@ import {
   findNearbyUsers,
   findAvailableTeams,
   getUserTeams,
+  getAllTeams,
   createTeam,
   updateTeamName,
   joinTeam,
@@ -46,6 +47,8 @@ export function TeamPage() {
   const [invitationTeamMembers, setInvitationTeamMembers] = useState<Map<string, (TeamMember & { profile?: UserProfile })[]>>(new Map());
   const [teamTotalDistances, setTeamTotalDistances] = useState<Map<string, number | null>>(new Map());
   const [loadingTeamDistances, setLoadingTeamDistances] = useState<Map<string, boolean>>(new Map());
+  const [allTeams, setAllTeams] = useState<TeamWithMembers[]>([]);
+  const [loadingAllTeams, setLoadingAllTeams] = useState(false);
   const [loading, setLoading] = useState(true);
   const [discovering, setDiscovering] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +59,9 @@ export function TeamPage() {
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [editedTeamName, setEditedTeamName] = useState('');
   const [updatingTeamName, setUpdatingTeamName] = useState(false);
+  const [nearbyUsersPage, setNearbyUsersPage] = useState<Map<string, number>>(new Map());
+  const [nearbyUsersSearch, setNearbyUsersSearch] = useState<Map<string, string>>(new Map());
+  const usersPerPage = 5;
 
   useEffect(() => {
     if (!user) {
@@ -147,12 +153,33 @@ export function TeamPage() {
 
       // Always load nearby users (to show them for inviting when in a team, or for discovery when not in a team)
       await discoverTeams(userProfile.latitude, userProfile.longitude);
+      
+      // Load all teams
+      await loadAllTeams();
     } catch (err: any) {
       setError(err.message || 'Error al cargar los datos del equipo');
     } finally {
       setLoading(false);
     }
   };
+
+  const loadAllTeams = async () => {
+    try {
+      setLoadingAllTeams(true);
+      const teams = await getAllTeams();
+      setAllTeams(teams);
+    } catch (err: any) {
+      console.error('Error loading all teams:', err);
+      // Don't set error state for this, just log it
+    } finally {
+      setLoadingAllTeams(false);
+    }
+  };
+
+  // Reset pagination when nearby users change
+  useEffect(() => {
+    setNearbyUsersPage(new Map());
+  }, [nearbyUsers.length]);
 
   // Load team distances after teams are loaded (non-blocking)
   const loadingDistancesRef = useRef<Set<string>>(new Set());
@@ -769,7 +796,17 @@ export function TeamPage() {
                       <div className="flex items-center justify-between mb-4">
                         <div>
                           <h2 className="text-2xl font-bold text-teal">
-                            Usuarios Cercanos ({nearbyUsers.filter(u => !teamUserIds.has(u.id)).length})
+                            Usuarios Cercanos ({(() => {
+                              const searchQuery = nearbyUsersSearch.get(team.id) || '';
+                              const baseFiltered = nearbyUsers.filter(u => !teamUserIds.has(u.id));
+                              if (!searchQuery.trim()) return baseFiltered.length;
+                              const query = searchQuery.toLowerCase().trim();
+                              return baseFiltered.filter(user => 
+                                user.name.toLowerCase().includes(query) ||
+                                (user.location && user.location.toLowerCase().includes(query)) ||
+                                (user.team_name && user.team_name.toLowerCase().includes(query))
+                              ).length;
+                            })()})
                           </h2>
                           <p className="text-gray-600 text-sm mt-1">
                             Encuentra usuarios cercanos para invitar a este equipo
@@ -785,56 +822,179 @@ export function TeamPage() {
                           <div className="inline-block w-8 h-8 border-4 border-teal border-t-transparent rounded-full animate-spin" />
                           <p className="mt-2 text-gray-600">Buscando usuarios cercanos...</p>
                         </div>
-                      ) : nearbyUsers.filter(u => !teamUserIds.has(u.id)).length === 0 ? (
-                        <p className="text-gray-600 py-4">
-                          No se encontraron usuarios cercanos dentro de 10 millas. ¡Intenta actualizar o pide a tus amigos que se unan!
-                        </p>
-                      ) : (
-                        <div className="space-y-3">
-                          {nearbyUsers
-                            .filter(u => !teamUserIds.has(u.id))
-                            .map((nearbyUser) => (
-                              <div
-                                key={nearbyUser.id}
-                                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-white/60 rounded-lg"
-                              >
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <p className="font-medium text-gray-800 truncate">{nearbyUser.name}</p>
-                                    {nearbyUser.is_team_leader && (
-                                      <span className="px-2 py-0.5 bg-teal/10 text-teal rounded-full text-xs font-semibold whitespace-nowrap">
-                                        👑 Líder
-                                      </span>
+                      ) : (() => {
+                        const baseFiltered = nearbyUsers.filter(u => !teamUserIds.has(u.id));
+                        if (baseFiltered.length === 0) {
+                          return (
+                            <p className="text-gray-600 py-4">
+                              No se encontraron usuarios cercanos dentro de 10 millas. ¡Intenta actualizar o pide a tus amigos que se unan!
+                            </p>
+                          );
+                        }
+                        
+                        const searchQuery = nearbyUsersSearch.get(team.id) || '';
+                        
+                        // Apply search filter
+                        const filteredUsers = baseFiltered.filter(user => {
+                          if (!searchQuery.trim()) return true;
+                          const query = searchQuery.toLowerCase().trim();
+                          return (
+                            user.name.toLowerCase().includes(query) ||
+                            (user.location && user.location.toLowerCase().includes(query)) ||
+                            (user.team_name && user.team_name.toLowerCase().includes(query))
+                          );
+                        });
+                        
+                        if (filteredUsers.length === 0 && searchQuery.trim()) {
+                          return (
+                            <div>
+                              <div className="mb-4">
+                                <input
+                                  type="text"
+                                  placeholder="Buscar por nombre, ubicación o equipo..."
+                                  value={searchQuery}
+                                  onChange={(e) => {
+                                    const newQuery = e.target.value;
+                                    setNearbyUsersSearch(prev => {
+                                      const newMap = new Map(prev);
+                                      newMap.set(team.id, newQuery);
+                                      return newMap;
+                                    });
+                                    setNearbyUsersPage(prev => {
+                                      const newMap = new Map(prev);
+                                      newMap.set(team.id, 1);
+                                      return newMap;
+                                    });
+                                  }}
+                                  className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-teal focus:outline-none bg-white/80 text-base"
+                                />
+                              </div>
+                              <p className="text-gray-600 py-4">
+                                No se encontraron usuarios que coincidan con tu búsqueda.
+                              </p>
+                            </div>
+                          );
+                        }
+                        
+                        const currentPage = nearbyUsersPage.get(team.id) || 1;
+                        const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+                        const paginatedUsers = filteredUsers.slice(
+                          (currentPage - 1) * usersPerPage,
+                          currentPage * usersPerPage
+                        );
+                        
+                        return (
+                          <>
+                            {/* Search Field */}
+                            <div className="mb-4">
+                              <input
+                                type="text"
+                                placeholder="Buscar por nombre, ubicación o equipo..."
+                                value={searchQuery}
+                                onChange={(e) => {
+                                  const newQuery = e.target.value;
+                                  setNearbyUsersSearch(prev => {
+                                    const newMap = new Map(prev);
+                                    newMap.set(team.id, newQuery);
+                                    return newMap;
+                                  });
+                                  // Reset to page 1 when search changes
+                                  setNearbyUsersPage(prev => {
+                                    const newMap = new Map(prev);
+                                    newMap.set(team.id, 1);
+                                    return newMap;
+                                  });
+                                }}
+                                className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-teal focus:outline-none bg-white/80 text-base"
+                              />
+                            </div>
+                            
+                            <div className="space-y-3">
+                              {paginatedUsers.map((nearbyUser) => (
+                                <div
+                                  key={nearbyUser.id}
+                                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-white/60 rounded-lg"
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <p className="font-medium text-gray-800 truncate">{nearbyUser.name}</p>
+                                      {nearbyUser.is_team_leader && (
+                                        <span className="px-2 py-0.5 bg-teal/10 text-teal rounded-full text-xs font-semibold whitespace-nowrap">
+                                          👑 Líder
+                                        </span>
+                                      )}
+                                    </div>
+                                    {nearbyUser.team_name && (
+                                      <p className="text-sm text-teal font-medium mb-1 truncate">
+                                        {nearbyUser.team_name}
+                                      </p>
+                                    )}
+                                    {nearbyUser.location && (
+                                      <p className="text-sm text-gray-600 truncate">{nearbyUser.location}</p>
                                     )}
                                   </div>
-                                  {nearbyUser.team_name && (
-                                    <p className="text-sm text-teal font-medium mb-1 truncate">
-                                      {nearbyUser.team_name}
+                                  <div className="flex flex-col sm:items-end gap-2 flex-shrink-0">
+                                    <p className="text-sm font-medium text-teal whitespace-nowrap">
+                                      A {nearbyUser.distance_miles.toFixed(1)} millas
                                     </p>
-                                  )}
-                                  {nearbyUser.location && (
-                                    <p className="text-sm text-gray-600 truncate">{nearbyUser.location}</p>
-                                  )}
+                                    {team.member_count < team.max_members && (
+                                      <Button
+                                        variant="primary"
+                                        size="sm"
+                                        onClick={() => handleInviteUser(nearbyUser.id, team.id)}
+                                        className="min-h-[44px] w-full sm:w-auto"
+                                      >
+                                        Invitar
+                                      </Button>
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="flex flex-col sm:items-end gap-2 flex-shrink-0">
-                                  <p className="text-sm font-medium text-teal whitespace-nowrap">
-                                    A {nearbyUser.distance_miles.toFixed(1)} millas
-                                  </p>
-                                  {team.member_count < team.max_members && (
-                                    <Button
-                                      variant="primary"
-                                      size="sm"
-                                      onClick={() => handleInviteUser(nearbyUser.id, team.id)}
-                                      className="min-h-[44px] w-full sm:w-auto"
-                                    >
-                                      Invitar
-                                    </Button>
-                                  )}
-                                </div>
+                              ))}
+                            </div>
+                            
+                            {/* Pagination Controls */}
+                            {filteredUsers.length > usersPerPage && (
+                              <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newPage = Math.max(1, currentPage - 1);
+                                    setNearbyUsersPage(prev => {
+                                      const newMap = new Map(prev);
+                                      newMap.set(team.id, newPage);
+                                      return newMap;
+                                    });
+                                  }}
+                                  disabled={currentPage === 1}
+                                  className="min-h-[44px]"
+                                >
+                                  Anterior
+                                </Button>
+                                <span className="text-sm text-gray-600">
+                                  Página {currentPage} de {totalPages}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newPage = Math.min(totalPages, currentPage + 1);
+                                    setNearbyUsersPage(prev => {
+                                      const newMap = new Map(prev);
+                                      newMap.set(team.id, newPage);
+                                      return newMap;
+                                    });
+                                  }}
+                                  disabled={currentPage >= totalPages}
+                                  className="min-h-[44px]"
+                                >
+                                  Siguiente
+                                </Button>
                               </div>
-                            ))}
-                        </div>
-                      )}
+                            )}
+                          </>
+                        );
+                      })()}
                     </Card>
                   )}
                 </div>
@@ -924,6 +1084,91 @@ export function TeamPage() {
             </Card>
           </div>
         )}
+
+        {/* All Teams Section */}
+        <div className="mt-12">
+          <Card variant="elevated">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-teal">
+                Todos los Equipos ({allTeams.length})
+              </h2>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={loadAllTeams} 
+                disabled={loadingAllTeams}
+              >
+                {loadingAllTeams ? 'Cargando...' : 'Actualizar'}
+              </Button>
+            </div>
+
+            {loadingAllTeams ? (
+              <div className="text-center py-8">
+                <div className="inline-block w-8 h-8 border-4 border-teal border-t-transparent rounded-full animate-spin" />
+                <p className="mt-2 text-gray-600">Cargando equipos...</p>
+              </div>
+            ) : allTeams.length === 0 ? (
+              <p className="text-gray-600 py-4 text-center">
+                No hay equipos disponibles en este momento.
+              </p>
+            ) : (
+              <div className="space-y-6">
+                {allTeams.map((team) => (
+                  <div
+                    key={team.id}
+                    className="p-4 bg-white/60 rounded-lg border border-gray-200"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-teal mb-1">
+                          {team.name || `Equipo ${team.id.slice(0, 8)}`}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          {team.member_count} de {Math.max(team.max_members, 14)} miembros
+                        </p>
+                      </div>
+                      {team.members.some(m => m.role === 'leader') && (
+                        <span className="px-2 py-1 bg-teal/10 text-teal rounded-full text-xs font-semibold whitespace-nowrap">
+                          👑 Líder
+                        </span>
+                      )}
+                    </div>
+                    
+                    {team.members.length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-sm font-medium text-gray-700 mb-2">
+                          Miembros:
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {team.members.map((member) => (
+                            <div
+                              key={member.id}
+                              className="flex items-center gap-2 px-3 py-2 bg-white/80 rounded-lg border border-gray-200"
+                            >
+                              <Avatar
+                                avatarUrl={member.profile?.avatar_url}
+                                name={member.profile?.name || 'Desconocido'}
+                                size="sm"
+                              />
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-sm font-medium text-gray-800">
+                                  {member.profile?.name || 'Desconocido'}
+                                </span>
+                                {member.role === 'leader' && (
+                                  <span className="text-xs text-teal font-semibold">👑</span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
         </div>
       </div>
     </PlanRestrictedContent>
