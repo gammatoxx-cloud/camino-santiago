@@ -440,6 +440,9 @@ export function TeamPage() {
       const userRequests = await getUserJoinRequests(user.id);
       setUserJoinRequests(userRequests);
       
+      // Refresh all teams to update the UI
+      await loadAllTeams();
+      
       alert('Solicitud enviada. El líder del equipo recibirá una notificación.');
     } catch (err: any) {
       setError(err.message || 'Error al enviar la solicitud de unión.');
@@ -803,7 +806,6 @@ export function TeamPage() {
                               const query = searchQuery.toLowerCase().trim();
                               return baseFiltered.filter(user => 
                                 user.name.toLowerCase().includes(query) ||
-                                (user.location && user.location.toLowerCase().includes(query)) ||
                                 (user.team_name && user.team_name.toLowerCase().includes(query))
                               ).length;
                             })()})
@@ -840,7 +842,6 @@ export function TeamPage() {
                           const query = searchQuery.toLowerCase().trim();
                           return (
                             user.name.toLowerCase().includes(query) ||
-                            (user.location && user.location.toLowerCase().includes(query)) ||
                             (user.team_name && user.team_name.toLowerCase().includes(query))
                           );
                         });
@@ -851,7 +852,7 @@ export function TeamPage() {
                               <div className="mb-4">
                                 <input
                                   type="text"
-                                  placeholder="Buscar por nombre, ubicación o equipo..."
+                                  placeholder="Buscar por nombre o equipo..."
                                   value={searchQuery}
                                   onChange={(e) => {
                                     const newQuery = e.target.value;
@@ -889,7 +890,7 @@ export function TeamPage() {
                             <div className="mb-4">
                               <input
                                 type="text"
-                                placeholder="Buscar por nombre, ubicación o equipo..."
+                                placeholder="Buscar por nombre o equipo..."
                                 value={searchQuery}
                                 onChange={(e) => {
                                   const newQuery = e.target.value;
@@ -929,9 +930,7 @@ export function TeamPage() {
                                         {nearbyUser.team_name}
                                       </p>
                                     )}
-                                    {nearbyUser.location && (
-                                      <p className="text-sm text-gray-600 truncate">{nearbyUser.location}</p>
-                                    )}
+                                    {/* Location removed for privacy - addresses should not be visible to other users */}
                                   </div>
                                   <div className="flex flex-col sm:items-end gap-2 flex-shrink-0">
                                     <p className="text-sm font-medium text-teal whitespace-nowrap">
@@ -1113,58 +1112,93 @@ export function TeamPage() {
               </p>
             ) : (
               <div className="space-y-6">
-                {allTeams.map((team) => (
-                  <div
-                    key={team.id}
-                    className="p-4 bg-white/60 rounded-lg border border-gray-200"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-teal mb-1">
-                          {team.name || `Equipo ${team.id.slice(0, 8)}`}
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          {team.member_count} de {Math.max(team.max_members, 14)} miembros
-                        </p>
-                      </div>
-                      {team.members.some(m => m.role === 'leader') && (
-                        <span className="px-2 py-1 bg-teal/10 text-teal rounded-full text-xs font-semibold whitespace-nowrap">
-                          👑 Líder
-                        </span>
-                      )}
-                    </div>
-                    
-                    {team.members.length > 0 && (
-                      <div className="mt-4">
-                        <p className="text-sm font-medium text-gray-700 mb-2">
-                          Miembros:
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {team.members.map((member) => (
-                            <div
-                              key={member.id}
-                              className="flex items-center gap-2 px-3 py-2 bg-white/80 rounded-lg border border-gray-200"
-                            >
-                              <Avatar
-                                avatarUrl={member.profile?.avatar_url}
-                                name={member.profile?.name || 'Desconocido'}
-                                size="sm"
-                              />
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-sm font-medium text-gray-800">
-                                  {member.profile?.name || 'Desconocido'}
-                                </span>
-                                {member.role === 'leader' && (
-                                  <span className="text-xs text-teal font-semibold">👑</span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
+                {allTeams.map((team) => {
+                  const isUserMember = userTeams.some(ut => ut.id === team.id);
+                  const hasPendingRequest = userJoinRequests.some(
+                    req => req.team_id === team.id && req.status === 'pending'
+                  );
+                  const canJoin = !isUserMember && team.member_count < Math.max(team.max_members, 14);
+                  const leader = team.members.find(m => m.role === 'leader');
+                  
+                  return (
+                    <div
+                      key={team.id}
+                      className="p-4 bg-white/60 rounded-lg border border-gray-200"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <h3 className="text-xl font-bold text-teal mb-1">
+                            {team.name || `Equipo ${team.id.slice(0, 8)}`}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {team.member_count} de {Math.max(team.max_members, 14)} miembros
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {leader && (
+                            <span className="px-2 py-1 bg-teal/10 text-teal rounded-full text-xs font-semibold whitespace-nowrap">
+                              👑 Líder: {leader.profile?.name || 'Desconocido'}
+                            </span>
+                          )}
+                          {isUserMember && (
+                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold whitespace-nowrap">
+                              ✓ Eres miembro
+                            </span>
+                          )}
                         </div>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      
+                      {team.members.length > 0 && (
+                        <div className="mt-4">
+                          <p className="text-sm font-medium text-gray-700 mb-2">
+                            Miembros:
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {team.members.map((member) => (
+                              <div
+                                key={member.id}
+                                className="flex items-center gap-2 px-3 py-2 bg-white/80 rounded-lg border border-gray-200"
+                              >
+                                <Avatar
+                                  avatarUrl={member.profile?.avatar_url}
+                                  name={member.profile?.name || 'Desconocido'}
+                                  size="sm"
+                                />
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-sm font-medium text-gray-800">
+                                    {member.profile?.name || 'Desconocido'}
+                                  </span>
+                                  {member.role === 'leader' && (
+                                    <span className="text-xs text-teal font-semibold">👑</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {canJoin && (
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          {hasPendingRequest ? (
+                            <p className="text-sm text-gray-600 text-center">
+                              Solicitud de unión enviada
+                            </p>
+                          ) : (
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleRequestJoin(team.id)}
+                              className="w-full"
+                            >
+                              Solicitar Unirse
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </Card>

@@ -19,7 +19,6 @@ export function TeamJoinRequestCard({
   declining = false,
 }: TeamJoinRequestCardProps) {
   const requesterName = request.requester?.name || 'Usuario desconocido';
-  const requesterLocation = request.requester?.location || null;
 
   return (
     <Card variant="elevated" className="p-4">
@@ -33,9 +32,7 @@ export function TeamJoinRequestCard({
           <p className="font-semibold text-gray-800 text-base mb-1 truncate">
             {requesterName}
           </p>
-          {requesterLocation && (
-            <p className="text-sm text-gray-600 mb-3 truncate">{requesterLocation}</p>
-          )}
+          {/* Location removed for privacy - addresses should not be visible to other users */}
           <div className="flex flex-col sm:flex-row gap-2">
             <Button
               variant="primary"

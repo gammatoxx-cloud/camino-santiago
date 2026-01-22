@@ -34,9 +34,7 @@ export function TeamMemberList({ team, currentUserId }: TeamMemberListProps) {
                     </span>
                   )}
                 </div>
-                {member.profile?.location && (
-                  <p className="text-sm text-gray-600 truncate mb-1">{member.profile.location}</p>
-                )}
+                {/* Location/address removed for privacy - addresses should not be visible to other users */}
                 <div className="flex flex-col gap-1 mt-1">
                   {member.profile?.email && (
                     <div className="flex items-center gap-2">

@@ -365,7 +365,7 @@ export async function getUserTeams(userId: string): Promise<TeamWithMembers[]> {
           
           return {
             ...m,
-            profile: profile ? { ...profile, email: email || null } : undefined,
+            profile: profile ? { ...profile, address: null, email: email || null } : undefined,
           };
         }) as (TeamMember & { profile?: UserProfile })[],
         member_count: members.length,
@@ -438,7 +438,7 @@ export async function getTeamMembersByTeamId(teamId: string): Promise<(TeamMembe
       
       return {
         ...(m as TeamMember),
-        profile: profile ? { ...profile, email: email || null } : undefined,
+        profile: profile ? { ...profile, address: null, email: email || null } : undefined,
       };
     }) as (TeamMember & { profile?: UserProfile })[];
   } catch (error: any) {
@@ -508,7 +508,7 @@ export async function createTeam(
       members: [
         {
           ...(member as TeamMember),
-          profile: profile ? { ...(profile as UserProfile), email: email || null } : undefined,
+          profile: profile ? { ...(profile as UserProfile), address: null, email: email || null } : undefined,
         },
       ] as (TeamMember & { profile?: UserProfile })[],
       member_count: 1,
@@ -604,7 +604,7 @@ export async function updateTeamName(
         
         return {
           ...m,
-          profile: profile ? { ...profile, email: email || null } : undefined,
+          profile: profile ? { ...profile, address: null, email: email || null } : undefined,
         };
       }) as (TeamMember & { profile?: UserProfile })[],
       member_count: (allMembers || []).length,
@@ -708,7 +708,7 @@ export async function joinTeam(userId: string, teamId: string): Promise<TeamWith
         
         return {
           ...m,
-          profile: profile ? { ...profile, email: email || null } : undefined,
+          profile: profile ? { ...profile, address: null, email: email || null } : undefined,
         };
       }) as (TeamMember & { profile?: UserProfile })[],
       member_count: (allMembers || []).length,
@@ -912,12 +912,12 @@ export async function getUserInvitations(userId: string): Promise<TeamInvitation
     if (profilesError) throw profilesError;
 
     const teamsMap = new Map(((teams || []) as Team[]).map(t => [t.id, t]));
-    const profilesMap = new Map(((profiles || []) as UserProfile[]).map(p => [p.id, p]));
+    const profilesMap = new Map(((profiles || []) as UserProfile[]).map(p => [p.id, { ...p, address: null }]));
 
     return typedInvitations.map(inv => ({
       ...inv,
       team: teamsMap.get(inv.team_id) as Team | undefined,
-      inviter: profilesMap.get(inv.invited_by) as UserProfile | undefined,
+      inviter: profilesMap.get(inv.invited_by) ? { ...profilesMap.get(inv.invited_by)!, address: null } as UserProfile : undefined,
     })) as TeamInvitationWithDetails[];
   } catch (error: any) {
     console.error('Error getting user invitations:', error);
@@ -1173,11 +1173,11 @@ export async function getTeamJoinRequests(
       .eq('id', teamId)
       .single();
 
-    const profilesMap = new Map(((profiles || []) as UserProfile[]).map(p => [p.id, p]));
+    const profilesMap = new Map(((profiles || []) as UserProfile[]).map(p => [p.id, { ...p, address: null }]));
 
     return typedRequests.map(req => ({
       ...req,
-      requester: profilesMap.get(req.requested_by) as UserProfile | undefined,
+      requester: profilesMap.get(req.requested_by) ? { ...profilesMap.get(req.requested_by)!, address: null } as UserProfile : undefined,
       team: team ? (team as Team) : undefined,
     })) as TeamJoinRequestWithDetails[];
   } catch (error: any) {
@@ -1313,7 +1313,7 @@ export async function acceptJoinRequest(
         
         return {
           ...m,
-          profile: profile ? { ...profile, email: email || null } : undefined,
+          profile: profile ? { ...profile, address: null, email: email || null } : undefined,
         };
       }) as (TeamMember & { profile?: UserProfile })[],
       member_count: (allMembers || []).length,
@@ -1382,62 +1382,133 @@ export async function getAllTeams(): Promise<TeamWithMembers[]> {
 
     const teamIds = (teams || []).map(t => (t as Team).id);
 
-    // Get all team members for these teams
-    const { data: allMembers, error: allMembersError } = await supabase
-      .from('team_members')
-      .select('*')
-      .in('team_id', teamIds);
+    // Get all team members for these teams using the discovery function (bypasses RLS)
+    const allMembersData: Array<{
+      id: string;
+      team_id: string;
+      user_id: string;
+      role: string;
+      joined_at: string;
+      profile_id: string;
+      profile_name: string;
+      profile_avatar_url: string | null;
+      profile_location: string | null;
+    }> = [];
 
-    if (allMembersError) throw allMembersError;
-
-    // Get all profiles for all members (excluding address for privacy)
-    const memberUserIds = [...new Set(((allMembers || []) as TeamMember[]).map(m => m.user_id))];
-    const { data: profilesData, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, name, location, latitude, longitude, avatar_url, phone_number, start_date, created_at, updated_at, user_plan')
-      .in('id', memberUserIds);
-
-    if (profilesError) throw profilesError;
-
-    // Get emails for all team members
-    const emailsByTeamId = new Map<string, Map<string, string>>();
     await Promise.all(
       teamIds.map(async (teamId) => {
         try {
-          const { data: emailsData, error: emailsError } = await (supabase.rpc as any)(
-            'get_team_member_emails',
+          const { data: membersData, error: membersError } = await (supabase.rpc as any)(
+            'get_team_members_for_discovery',
             { team_id_param: teamId }
           );
           
-          if (!emailsError && emailsData) {
-            const emailsMap = new Map<string, string>();
-            (emailsData || []).forEach((item: { user_id: string; email: string }) => {
-              emailsMap.set(item.user_id, item.email);
-            });
-            emailsByTeamId.set(teamId, emailsMap);
+          if (!membersError && membersData) {
+            allMembersData.push(...(membersData || []));
           }
         } catch (err) {
-          console.error(`Error loading emails for team ${teamId}:`, err);
+          console.error(`Error loading members for team ${teamId}:`, err);
         }
       })
     );
 
-    // Create maps for quick lookup
-    const profilesMap = new Map(((profilesData || []) as UserProfile[]).map(p => [p.id, p]));
+    // Get emails and phone numbers for team members (only for teams user is in)
+    const emailsByTeamId = new Map<string, Map<string, string>>();
+    const phoneNumbersByTeamId = new Map<string, Map<string, string | null>>();
+    
+    // Check which teams the current user is a member of
+    const { data: currentUser } = await supabase.auth.getUser();
+    const userId = currentUser?.data?.user?.id;
+    let userTeamIds = new Set<string>();
+    
+    if (userId) {
+      const { data: userMemberships } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('user_id', userId);
+      
+      userTeamIds = new Set((userMemberships || []).map(m => m.team_id));
+      
+      // Only fetch emails/phone for teams the user is in
+      await Promise.all(
+        Array.from(userTeamIds).map(async (teamId) => {
+          try {
+            const { data: emailsData, error: emailsError } = await (supabase.rpc as any)(
+              'get_team_member_emails',
+              { team_id_param: teamId }
+            );
+            
+            if (!emailsError && emailsData) {
+              const emailsMap = new Map<string, string>();
+              (emailsData || []).forEach((item: { user_id: string; email: string }) => {
+                emailsMap.set(item.user_id, item.email);
+              });
+              emailsByTeamId.set(teamId, emailsMap);
+            }
+            
+            // Get phone numbers for team members
+            const memberUserIds = allMembersData
+              .filter(m => m.team_id === teamId)
+              .map(m => m.user_id);
+            
+            if (memberUserIds.length > 0) {
+              const { data: profilesData } = await supabase
+                .from('profiles')
+                .select('id, phone_number')
+                .in('id', memberUserIds);
+              
+              if (profilesData) {
+                const phoneMap = new Map<string, string | null>();
+                profilesData.forEach((p: { id: string; phone_number: string | null }) => {
+                  phoneMap.set(p.id, p.phone_number);
+                });
+                phoneNumbersByTeamId.set(teamId, phoneMap);
+              }
+            }
+          } catch (err) {
+            console.error(`Error loading contact info for team ${teamId}:`, err);
+          }
+        })
+      );
+    }
 
     // Combine teams with their members
     const typedTeams = (teams || []) as Team[];
+    
     return typedTeams.map((team: Team) => {
-      const members = ((allMembers || []) as TeamMember[])
+      const members = allMembersData
         .filter(m => m.team_id === team.id)
         .map(m => {
-          const profile = profilesMap.get(m.user_id) as UserProfile | undefined;
+          // Only include email/phone if user is a member of this team
+          const isUserInTeam = userTeamIds.has(team.id);
           const emailsMap = emailsByTeamId.get(team.id);
-          const email = emailsMap?.get(m.user_id);
+          const phoneMap = phoneNumbersByTeamId.get(team.id);
+          const email = isUserInTeam ? (emailsMap?.get(m.user_id) || null) : null;
+          const phone = isUserInTeam ? (phoneMap?.get(m.user_id) || null) : null;
+          
+          const profile: UserProfile = {
+            id: m.profile_id,
+            name: m.profile_name || 'Desconocido',
+            avatar_url: m.profile_avatar_url,
+            location: m.profile_location || null,
+            address: null, // Addresses are private and not visible to other users
+            latitude: null,
+            longitude: null,
+            phone_number: phone,
+            start_date: new Date().toISOString().split('T')[0],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            user_plan: 'gratis' as const,
+            email: email,
+          };
           
           return {
-            ...m,
-            profile: profile ? { ...profile, email: email || null } : undefined,
+            id: m.id,
+            team_id: m.team_id,
+            user_id: m.user_id,
+            role: m.role as 'leader' | 'member',
+            joined_at: m.joined_at,
+            profile: profile,
           };
         }) as (TeamMember & { profile?: UserProfile })[];
 

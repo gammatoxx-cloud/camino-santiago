@@ -39,7 +39,6 @@ export function TeamDiscovery({
     const query = searchQuery.toLowerCase().trim();
     return (
       user.name.toLowerCase().includes(query) ||
-      (user.location && user.location.toLowerCase().includes(query)) ||
       (user.team_name && user.team_name.toLowerCase().includes(query))
     );
   });
@@ -84,7 +83,7 @@ export function TeamDiscovery({
                 <div className="mb-4">
                   <input
                     type="text"
-                    placeholder="Buscar por nombre, ubicación o equipo..."
+                     placeholder="Buscar por nombre o equipo..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-teal focus:outline-none bg-white/80 text-base"
@@ -120,9 +119,7 @@ export function TeamDiscovery({
                                 {user.team_name}
                               </p>
                             )}
-                            {user.location && (
-                              <p className="text-sm text-gray-600 truncate">{user.location}</p>
-                            )}
+                            {/* Location removed for privacy - addresses should not be visible to other users */}
                           </div>
                           <div className="flex flex-col sm:items-end gap-2 flex-shrink-0">
                             <p className="text-sm font-medium text-teal whitespace-nowrap">
