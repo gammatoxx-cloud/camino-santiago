@@ -495,6 +495,189 @@ export function ProfilePage() {
           Tu Perfil
         </h1>
 
+        {/* Tu Plan Section */}
+        <Card variant="elevated" className="mb-6">
+          <h2 className="text-heading-3 text-teal mb-6">Tu Plan</h2>
+          
+          {subscriptionLoading ? (
+            <div className="text-center py-4">
+              <div className="text-teal">Cargando estado de suscripción...</div>
+            </div>
+          ) : subscription && subscription.status === 'active' ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-1">Suscripción Activa</h3>
+                  <p className="text-sm text-gray-600">Plan Mensual - $20/mes</p>
+                </div>
+                <span className="px-4 py-2 rounded-full text-sm font-semibold bg-green-100 text-green-800">
+                  Activa
+                </span>
+              </div>
+              
+              <div className="pt-4 border-t border-gray-200 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Período actual:</span>
+                  <span className="font-semibold text-gray-900">
+                    {format(new Date(subscription.current_period_start), 'd MMM yyyy', { locale: es })} -{' '}
+                    {format(new Date(subscription.current_period_end), 'd MMM yyyy', { locale: es })}
+                  </span>
+                </div>
+                {subscription.cancel_at_period_end && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Renovación:</span>
+                    <span className="font-semibold text-yellow-700">Se cancelará al final del período</span>
+                  </div>
+                )}
+              </div>
+
+              <Button
+                onClick={() => navigate('/subscription')}
+                variant="secondary"
+                size="md"
+                className="w-full mt-4"
+              >
+                Gestionar Suscripción
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">Actualiza Tu Plan</h3>
+                <p className="text-gray-600 mb-6">
+                  Elige el plan que mejor se adapte a tus necesidades de entrenamiento.
+                </p>
+              </div>
+
+              {/* Plan Options */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {/* Basico Plan */}
+                <div className={`p-5 rounded-2xl border-2 transition-all ${
+                  plan === 'basico' 
+                    ? 'border-teal bg-teal/5' 
+                    : 'border-gray-200 bg-white/60 hover:border-teal/50'
+                }`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-xl font-bold text-teal">Plan Básico</h4>
+                    <span className="text-2xl font-bold text-gray-900">$10</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-4">/mes</p>
+                  
+                  <ul className="space-y-2.5 mb-4 text-sm text-gray-700">
+                    <li className="flex items-start">
+                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Acceso al Tablero</span>
+                    </li>
+                    <li className="flex items-start">
+                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Programa completo de 52 semanas</span>
+                    </li>
+                    <li className="flex items-start">
+                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Equipos y comunidad</span>
+                    </li>
+                    <li className="flex items-start">
+                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Senderos y galería</span>
+                    </li>
+                    <li className="flex items-start">
+                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Insignias y logros</span>
+                    </li>
+                    <li className="flex items-start">
+                      <svg className="w-5 h-5 text-gray-400 mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      <span className="text-gray-500">Caminatas Magnolias</span>
+                    </li>
+                  </ul>
+
+                  {plan === 'basico' && (
+                    <div className="px-3 py-2 bg-teal/10 rounded-lg text-center">
+                      <span className="text-sm font-semibold text-teal">Tu plan actual</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Completo Plan */}
+                <div className={`p-5 rounded-2xl border-2 transition-all ${
+                  plan === 'completo' 
+                    ? 'border-teal bg-teal/5' 
+                    : plan === 'basico'
+                    ? 'border-teal-300 bg-gradient-to-br from-teal/5 to-white'
+                    : 'border-gray-200 bg-white/60 hover:border-teal/50'
+                }`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-xl font-bold text-teal">Plan Completo</h4>
+                    <span className="text-2xl font-bold text-gray-900">$24</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-4">/mes</p>
+                  
+                  <ul className="space-y-2.5 mb-4 text-sm text-gray-700">
+                    <li className="flex items-start">
+                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Todo lo del Plan Básico</span>
+                    </li>
+                    <li className="flex items-start">
+                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="font-semibold">Caminatas Magnolias</span>
+                    </li>
+                    <li className="flex items-start">
+                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>26 caminatas guiadas en comunidad</span>
+                    </li>
+                    <li className="flex items-start">
+                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>289 km de entrenamiento total</span>
+                    </li>
+                    <li className="flex items-start">
+                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Acceso completo a todas las funciones</span>
+                    </li>
+                  </ul>
+
+                  {plan === 'completo' && (
+                    <div className="px-3 py-2 bg-teal/10 rounded-lg text-center">
+                      <span className="text-sm font-semibold text-teal">Tu plan actual</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <Button
+                onClick={() => {
+                  window.open('https://www.magnoliasusa.org/pricing-plans/planes', '_blank');
+                }}
+                variant="primary"
+                size="lg"
+                className="w-full min-h-[56px] text-lg font-bold"
+              >
+                Actualizar Plan
+              </Button>
+            </div>
+          )}
+        </Card>
+
         <Card variant="elevated" className="mb-6">
           {!editing ? (
             <div>
@@ -728,189 +911,6 @@ export function ProfilePage() {
                   {uploadingPicture ? 'Subiendo foto...' : 'Guardar'}
                 </Button>
               </div>
-            </div>
-          )}
-        </Card>
-
-        {/* Tu Plan Section */}
-        <Card variant="elevated" className="mb-6">
-          <h2 className="text-heading-3 text-teal mb-6">Tu Plan</h2>
-          
-          {subscriptionLoading ? (
-            <div className="text-center py-4">
-              <div className="text-teal">Cargando estado de suscripción...</div>
-            </div>
-          ) : subscription && subscription.status === 'active' ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-1">Suscripción Activa</h3>
-                  <p className="text-sm text-gray-600">Plan Mensual - $20/mes</p>
-                </div>
-                <span className="px-4 py-2 rounded-full text-sm font-semibold bg-green-100 text-green-800">
-                  Activa
-                </span>
-              </div>
-              
-              <div className="pt-4 border-t border-gray-200 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Período actual:</span>
-                  <span className="font-semibold text-gray-900">
-                    {format(new Date(subscription.current_period_start), 'd MMM yyyy', { locale: es })} -{' '}
-                    {format(new Date(subscription.current_period_end), 'd MMM yyyy', { locale: es })}
-                  </span>
-                </div>
-                {subscription.cancel_at_period_end && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Renovación:</span>
-                    <span className="font-semibold text-yellow-700">Se cancelará al final del período</span>
-                  </div>
-                )}
-              </div>
-
-              <Button
-                onClick={() => navigate('/subscription')}
-                variant="secondary"
-                size="md"
-                className="w-full mt-4"
-              >
-                Gestionar Suscripción
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">Actualiza Tu Plan</h3>
-                <p className="text-gray-600 mb-6">
-                  Elige el plan que mejor se adapte a tus necesidades de entrenamiento.
-                </p>
-              </div>
-
-              {/* Plan Options */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                {/* Basico Plan */}
-                <div className={`p-5 rounded-2xl border-2 transition-all ${
-                  plan === 'basico' 
-                    ? 'border-teal bg-teal/5' 
-                    : 'border-gray-200 bg-white/60 hover:border-teal/50'
-                }`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-xl font-bold text-teal">Plan Básico</h4>
-                    <span className="text-2xl font-bold text-gray-900">$10</span>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-4">/mes</p>
-                  
-                  <ul className="space-y-2.5 mb-4 text-sm text-gray-700">
-                    <li className="flex items-start">
-                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
-                        <path d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>Acceso al Tablero</span>
-                    </li>
-                    <li className="flex items-start">
-                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
-                        <path d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>Programa completo de 52 semanas</span>
-                    </li>
-                    <li className="flex items-start">
-                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
-                        <path d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>Equipos y comunidad</span>
-                    </li>
-                    <li className="flex items-start">
-                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
-                        <path d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>Senderos y galería</span>
-                    </li>
-                    <li className="flex items-start">
-                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
-                        <path d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>Insignias y logros</span>
-                    </li>
-                    <li className="flex items-start">
-                      <svg className="w-5 h-5 text-gray-400 mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
-                        <path d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                      <span className="text-gray-500">Caminatas Magnolias</span>
-                    </li>
-                  </ul>
-
-                  {plan === 'basico' && (
-                    <div className="px-3 py-2 bg-teal/10 rounded-lg text-center">
-                      <span className="text-sm font-semibold text-teal">Tu plan actual</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Completo Plan */}
-                <div className={`p-5 rounded-2xl border-2 transition-all ${
-                  plan === 'completo' 
-                    ? 'border-teal bg-teal/5' 
-                    : plan === 'basico'
-                    ? 'border-teal-300 bg-gradient-to-br from-teal/5 to-white'
-                    : 'border-gray-200 bg-white/60 hover:border-teal/50'
-                }`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-xl font-bold text-teal">Plan Completo</h4>
-                    <span className="text-2xl font-bold text-gray-900">$24</span>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-4">/mes</p>
-                  
-                  <ul className="space-y-2.5 mb-4 text-sm text-gray-700">
-                    <li className="flex items-start">
-                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
-                        <path d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>Todo lo del Plan Básico</span>
-                    </li>
-                    <li className="flex items-start">
-                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
-                        <path d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span className="font-semibold">Caminatas Magnolias</span>
-                    </li>
-                    <li className="flex items-start">
-                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
-                        <path d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>26 caminatas guiadas en comunidad</span>
-                    </li>
-                    <li className="flex items-start">
-                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
-                        <path d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>289 km de entrenamiento total</span>
-                    </li>
-                    <li className="flex items-start">
-                      <svg className="w-5 h-5 text-teal mr-2 flex-shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
-                        <path d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>Acceso completo a todas las funciones</span>
-                    </li>
-                  </ul>
-
-                  {plan === 'completo' && (
-                    <div className="px-3 py-2 bg-teal/10 rounded-lg text-center">
-                      <span className="text-sm font-semibold text-teal">Tu plan actual</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <Button
-                onClick={() => {
-                  window.open('https://www.magnoliasusa.org/pricing-plans/planes', '_blank');
-                }}
-                variant="primary"
-                size="lg"
-                className="w-full min-h-[56px] text-lg font-bold"
-              >
-                Actualizar Plan
-              </Button>
             </div>
           )}
         </Card>

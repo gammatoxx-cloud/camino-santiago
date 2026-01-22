@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
+import { resendVerificationEmail } from '../../lib/auth';
 
 interface AuthFormProps {
   onSignUp: (email: string, password: string) => Promise<{ error: any }>;
@@ -43,6 +44,9 @@ export function AuthForm({ onSignUp, onSignIn, defaultMode = 'signin' }: AuthFor
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showResendVerification, setShowResendVerification] = useState(false);
+  const [resendingVerification, setResendingVerification] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
 
   const passwordRequirements = useMemo(
     () => (isSignUp ? validatePassword(password) : null),
@@ -72,7 +76,15 @@ export function AuthForm({ onSignUp, onSignIn, defaultMode = 'signin' }: AuthFor
         : await onSignIn(email, password);
 
       if (result.error) {
-        setError(result.error.message || 'Ocurrió un error');
+        // Provide more helpful error message for invalid credentials
+        let errorMessage = result.error.message || 'Ocurrió un error';
+        if (!isSignUp && result.error.message === 'Invalid login credentials') {
+          errorMessage = 'Credenciales inválidas. Si acabas de crear tu cuenta, por favor verifica tu correo electrónico antes de iniciar sesión.';
+          setShowResendVerification(true);
+        } else {
+          setShowResendVerification(false);
+        }
+        setError(errorMessage);
       }
     } catch (err) {
       setError('Ocurrió un error inesperado');
@@ -383,6 +395,71 @@ export function AuthForm({ onSignUp, onSignIn, defaultMode = 'signin' }: AuthFor
           </div>
         )}
 
+        {showResendVerification && !isSignUp && (
+          <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg text-sm">
+            {verificationSent ? (
+              <div className="space-y-2">
+                <p className="font-semibold">⚠️ Problema con el envío de correos</p>
+                <p className="text-xs">
+                  Supabase indica que el correo fue enviado, pero si no lo recibes, esto indica un problema de configuración del servicio de correo en Supabase. 
+                  <strong> Solución temporal:</strong> Contacta al administrador para que verifique manualmente tu cuenta en el panel de Supabase, o desactiva temporalmente la verificación de correo en la configuración de Supabase (Authentication → Settings → Email Auth → Disable "Confirm email").
+                </p>
+                <p className="text-xs mt-2">
+                  También revisa tu bandeja de entrada y carpeta de spam. Límite: 4 correos por hora.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p>¿No has verificado tu correo electrónico?</p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full"
+                  onClick={async () => {
+                    if (!email.trim()) return;
+                    setResendingVerification(true);
+                    setError(null);
+                    try {
+                      const { error: resendError } = await resendVerificationEmail(email);
+                      if (resendError) {
+                        let errorMsg = resendError.message || 'No se pudo enviar el correo de verificación';
+                        // Check for rate limiting or common errors
+                        if (resendError.message?.toLowerCase().includes('rate limit') || 
+                            resendError.message?.toLowerCase().includes('too many') ||
+                            resendError.status === 429) {
+                          errorMsg = 'Has solicitado demasiados correos. Por favor espera una hora antes de intentar nuevamente. Revisa tu bandeja de entrada y carpeta de spam.';
+                        } else if (resendError.message?.toLowerCase().includes('not found') || 
+                                   resendError.message?.toLowerCase().includes('no user')) {
+                          errorMsg = 'No se encontró una cuenta con este correo electrónico. Por favor verifica que el correo sea correcto.';
+                        }
+                        setError(errorMsg);
+                        setShowResendVerification(false);
+                      } else {
+                        // Show success message
+                        setVerificationSent(true);
+                        setError(null);
+                        setTimeout(() => {
+                          setShowResendVerification(false);
+                          setVerificationSent(false);
+                        }, 8000);
+                      }
+                    } catch (err) {
+                      setError(`Ocurrió un error al enviar el correo de verificación: ${err instanceof Error ? err.message : String(err)}`);
+                      setShowResendVerification(false);
+                    } finally {
+                      setResendingVerification(false);
+                    }
+                  }}
+                  disabled={resendingVerification}
+                >
+                  {resendingVerification ? 'Enviando...' : 'Reenviar correo de verificación'}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
         <Button
           type="submit"
           variant="primary"
@@ -401,6 +478,8 @@ export function AuthForm({ onSignUp, onSignIn, defaultMode = 'signin' }: AuthFor
             setIsSignUp(!isSignUp);
             setError(null);
             setPassword('');
+            setShowResendVerification(false);
+            setVerificationSent(false);
           }}
           className="text-teal hover:underline text-sm font-medium"
         >

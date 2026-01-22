@@ -25,14 +25,14 @@ export function BlurOverlay({ upgradeToPlan, onUpgrade, className = '' }: BlurOv
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${className}`}
+      className={`absolute inset-0 z-50 flex items-start justify-center p-4 pt-8 md:pt-12 overflow-y-auto ${className}`}
       style={{
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
         backgroundColor: 'rgba(231, 227, 208, 0.85)',
       }}
     >
-      <div className="relative w-full max-w-md">
+      <div className="relative w-full max-w-md mt-4 md:mt-8">
         {/* Blurred content backdrop */}
         <div
           className="absolute inset-0 rounded-3xl"
