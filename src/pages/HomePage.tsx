@@ -24,6 +24,13 @@ export function HomePage() {
           <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
             {/* Left side - Text and CTA */}
             <div className="flex-1 text-left w-full md:w-auto">
+              <div className="mb-10 md:hidden flex justify-center">
+                <img 
+                  src="/magnolias-logo.png" 
+                  alt="Magnolias Logo" 
+                  className="h-16 w-auto"
+                />
+              </div>
               <h1 className="text-display text-teal mb-6">
                 Un año de entrenamiento en comunidad para llegar listos al Camino de Santiago.
               </h1>
