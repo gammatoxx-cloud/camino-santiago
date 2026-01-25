@@ -543,9 +543,13 @@ export function ProfilePage() {
           ) : (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">Actualiza Tu Plan</h3>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                  {plan === 'basico' || plan === 'completo' ? 'Tu Plan Actual' : 'Actualiza Tu Plan'}
+                </h3>
                 <p className="text-gray-600 mb-6">
-                  Elige el plan que mejor se adapte a tus necesidades de entrenamiento.
+                  {plan === 'basico' || plan === 'completo' 
+                    ? 'Aquí puedes ver los detalles de tu plan actual.'
+                    : 'Elige el plan que mejor se adapte a tus necesidades de entrenamiento.'}
                 </p>
               </div>
 
@@ -664,6 +668,7 @@ export function ProfilePage() {
                 </div>
               </div>
               
+{plan !== 'basico' && plan !== 'completo' && (
               <Button
                 onClick={() => {
                   window.open('https://www.magnoliasusa.org/pricing-plans/planes', '_blank');
@@ -674,6 +679,7 @@ export function ProfilePage() {
               >
                 Actualizar Plan
               </Button>
+              )}
             </div>
           )}
         </Card>
