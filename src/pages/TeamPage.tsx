@@ -683,8 +683,43 @@ export function TeamPage() {
           </Card>
         )}
 
+        {/* Discovery Section - Always show for all users */}
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold text-teal">Encuentra Tu Equipo</h2>
+            <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={discovering}>
+              {discovering ? 'Buscando...' : 'Actualizar'}
+            </Button>
+          </div>
+
+          {profile?.latitude && profile?.longitude ? (
+            <TeamDiscovery
+              nearbyUsers={nearbyUsers}
+              availableTeams={availableTeams}
+              currentUserId={user?.id || ''}
+              onCreateTeam={() => setShowCreateTeamModal(true)}
+              onJoinTeam={handleJoinTeam}
+              onLeaveTeam={handleLeaveTeam}
+              onRequestJoin={handleRequestJoin}
+              loading={discovering}
+              pendingJoinRequestTeamIds={userJoinRequests
+                .filter(req => req.status === 'pending')
+                .map(req => req.team_id)}
+            />
+          ) : (
+            <Card variant="elevated">
+              <p className="text-gray-700 mb-4">
+                Por favor actualiza tu dirección en la configuración de tu perfil para encontrar compañeros de equipo.
+              </p>
+              <Button onClick={() => navigate('/profile')} variant="primary">
+                Actualizar Perfil
+              </Button>
+            </Card>
+          )}
+        </div>
+
         {/* User's Teams */}
-        {userTeams.length > 0 ? (
+        {userTeams.length > 0 && (
           <>
             {userTeams.map((team) => {
               const isLeader = team.members.some(m => m.user_id === user?.id && m.role === 'leader');
@@ -999,43 +1034,6 @@ export function TeamPage() {
                 </div>
               );
             })}
-          </>
-        ) : (
-          <>
-            {/* Discovery Section */}
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-teal">Encuentra Tu Equipo</h2>
-                <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={discovering}>
-                  {discovering ? 'Buscando...' : 'Actualizar'}
-                </Button>
-              </div>
-
-              {profile?.latitude && profile?.longitude ? (
-                <TeamDiscovery
-                  nearbyUsers={nearbyUsers}
-                  availableTeams={availableTeams}
-                  currentUserId={user?.id || ''}
-                  onCreateTeam={() => setShowCreateTeamModal(true)}
-                  onJoinTeam={handleJoinTeam}
-                  onLeaveTeam={handleLeaveTeam}
-                  onRequestJoin={handleRequestJoin}
-                  loading={discovering}
-                  pendingJoinRequestTeamIds={userJoinRequests
-                    .filter(req => req.status === 'pending')
-                    .map(req => req.team_id)}
-                />
-              ) : (
-                <Card variant="elevated">
-                  <p className="text-gray-700 mb-4">
-                    Por favor actualiza tu dirección en la configuración de tu perfil para encontrar compañeros de equipo.
-                  </p>
-                  <Button onClick={() => navigate('/profile')} variant="primary">
-                    Actualizar Perfil
-                  </Button>
-                </Card>
-              )}
-            </div>
           </>
         )}
 
