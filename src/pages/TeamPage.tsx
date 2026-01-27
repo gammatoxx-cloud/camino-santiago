@@ -1216,7 +1216,13 @@ export function TeamPage() {
               }
             }}
           >
-            <Card variant="elevated" className="max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <Card 
+              variant="elevated" 
+              className="max-w-md w-full" 
+              onClick={(e) => {
+                e?.stopPropagation();
+              }}
+            >
               <h3 className="text-2xl font-bold text-teal mb-4">Crear Nuevo Equipo</h3>
               <div className="space-y-4">
                 <div>

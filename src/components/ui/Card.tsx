@@ -3,7 +3,7 @@ import React from 'react';
 interface CardProps {
   children: React.ReactNode;
   className?: string;
-  onClick?: () => void;
+  onClick?: (e?: React.MouseEvent) => void;
   variant?: 'default' | 'elevated' | 'subtle' | 'stat' | 'process' | 'accent';
   style?: React.CSSProperties;
 }
