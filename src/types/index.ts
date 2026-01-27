@@ -69,6 +69,7 @@ export interface Team {
   name: string | null;
   created_by: string;
   max_members: number;
+  whatsapp_link: string | null;
   created_at: string;
   updated_at: string;
 }
