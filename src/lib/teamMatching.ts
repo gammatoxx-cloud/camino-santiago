@@ -648,10 +648,10 @@ export async function updateTeamWhatsAppLink(
     }
 
     // Update the WhatsApp link
-    const updateData: Database['public']['Tables']['teams']['Update'] = {
+    const updateData = {
       whatsapp_link: whatsappLink.trim() || null,
       updated_at: new Date().toISOString(),
-    };
+    } as never;
     
     const { data: team, error: teamError } = await (supabase
       .from('teams') as any)
