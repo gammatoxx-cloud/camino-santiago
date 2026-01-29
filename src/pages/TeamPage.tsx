@@ -852,26 +852,10 @@ export function TeamPage() {
                                 autoComplete="url"
                                 value={editedWhatsAppLink}
                                 onChange={(e) => setEditedWhatsAppLink(e.target.value)}
-                                onPaste={(e) => {
-                                  // Handle paste explicitly for mobile compatibility
-                                  const pastedText = e.clipboardData.getData('text');
-                                  if (pastedText) {
-                                    setEditedWhatsAppLink(pastedText);
-                                    e.preventDefault();
-                                  }
-                                }}
-                                onTouchStart={(e) => {
-                                  // Allow touch events to propagate for paste menu
-                                  e.stopPropagation();
-                                }}
-                                onTouchEnd={(e) => {
-                                  // Allow touch events to propagate for paste menu
-                                  e.stopPropagation();
-                                }}
                                 className="w-full px-4 py-2 text-base rounded-lg border-2 border-teal focus:border-teal focus:outline-none bg-white/80"
                                 placeholder="https://chat.whatsapp.com/..."
                                 disabled={updatingWhatsAppLink}
-                                style={{ fontSize: '16px', WebkitUserSelect: 'text', userSelect: 'text' }}
+                                style={{ fontSize: '16px' }}
                               />
                             </div>
                             <div className="flex gap-2">
@@ -1199,29 +1183,10 @@ export function TeamPage() {
 
         {/* Create Team Modal */}
         {showCreateTeamModal && (
-          <div 
-            className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
-            onClick={(e) => {
-              // Close modal when clicking backdrop, but don't interfere with input interactions
-              if (e.target === e.currentTarget) {
-                setShowCreateTeamModal(false);
-                setNewTeamName('');
-                setNewTeamWhatsAppLink('');
-              }
-            }}
-            onTouchStart={(e) => {
-              // Don't prevent default on touch - allow paste menu to work
-              if (e.target !== e.currentTarget) {
-                e.stopPropagation();
-              }
-            }}
-          >
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <Card 
               variant="elevated" 
-              className="max-w-md w-full" 
-              onClick={(e) => {
-                e?.stopPropagation();
-              }}
+              className="max-w-md w-full"
             >
               <h3 className="text-2xl font-bold text-teal mb-4">Crear Nuevo Equipo</h3>
               <div className="space-y-4">
@@ -1249,25 +1214,9 @@ export function TeamPage() {
                     autoComplete="url"
                     value={newTeamWhatsAppLink}
                     onChange={(e) => setNewTeamWhatsAppLink(e.target.value)}
-                    onPaste={(e) => {
-                      // Handle paste explicitly for mobile compatibility
-                      const pastedText = e.clipboardData.getData('text');
-                      if (pastedText) {
-                        setNewTeamWhatsAppLink(pastedText);
-                        e.preventDefault();
-                      }
-                    }}
-                    onTouchStart={(e) => {
-                      // Allow touch events to propagate for paste menu
-                      e.stopPropagation();
-                    }}
-                    onTouchEnd={(e) => {
-                      // Allow touch events to propagate for paste menu
-                      e.stopPropagation();
-                    }}
                     className="w-full px-4 py-3 text-base rounded-lg border-2 border-gray-200 focus:border-teal focus:outline-none bg-white/80"
                     placeholder="https://chat.whatsapp.com/..."
-                    style={{ fontSize: '16px', WebkitUserSelect: 'text', userSelect: 'text' }}
+                    style={{ fontSize: '16px' }}
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Comparte el enlace del grupo de WhatsApp para que los miembros puedan unirse
