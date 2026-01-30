@@ -31,6 +31,8 @@ export function ImageModal({ image, isOpen, onClose, onDelete, onUpdate }: Image
       setCurrentImage(image);
       setCaptionText(image.caption || '');
       setEditingCaption(false);
+      // Auto-show comments so they're visible without clicking "Comentarios"
+      setShowComments(true);
     } else {
       document.body.style.overflow = '';
     }

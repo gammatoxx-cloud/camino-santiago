@@ -17,6 +17,7 @@ export function CommentSection({ imageId, className = '' }: CommentSectionProps)
   const [commentText, setCommentText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     loadComments();
@@ -43,9 +44,12 @@ export function CommentSection({ imageId, className = '' }: CommentSectionProps)
     try {
       setSubmitting(true);
       setError(null);
+      setSuccessMessage(null);
       const newComment = await addComment(imageId, commentText);
       setComments((prev) => [...prev, newComment]);
       setCommentText('');
+      setSuccessMessage('Comentario publicado correctamente.');
+      setTimeout(() => setSuccessMessage(null), 4000);
     } catch (err: any) {
       setError(err.message || 'Error al agregar comentario');
       console.error('Error adding comment:', err);
@@ -75,6 +79,12 @@ export function CommentSection({ imageId, className = '' }: CommentSectionProps)
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
           {error}
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">
+          {successMessage}
         </div>
       )}
 

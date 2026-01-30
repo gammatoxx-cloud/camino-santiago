@@ -234,7 +234,7 @@ export async function updateGalleryImageCaption(
 
   // Update caption
   const updateData = { caption: caption || null, updated_at: new Date().toISOString() };
-  const { data, error } = (supabase
+  const { data, error } = await (supabase
     .from('gallery_images') as any)
     .update(updateData)
     .eq('id', imageId)
