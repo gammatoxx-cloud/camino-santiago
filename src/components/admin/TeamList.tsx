@@ -9,12 +9,15 @@ interface TeamListProps {
   onDeleteTeam: (teamId: string) => Promise<void>;
   onAddUser: (teamId: string) => void;
   onRemoveUser: (teamId: string, userId: string) => Promise<void>;
+  onUpdateWhatsAppLink: (teamId: string, whatsappLink: string) => Promise<void>;
 }
 
-export function TeamList({ teams, loading, onDeleteTeam, onAddUser, onRemoveUser }: TeamListProps) {
+export function TeamList({ teams, loading, onDeleteTeam, onAddUser, onRemoveUser, onUpdateWhatsAppLink }: TeamListProps) {
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
   const [deletingTeamId, setDeletingTeamId] = useState<string | null>(null);
   const [removingUserId, setRemovingUserId] = useState<{ teamId: string; userId: string } | null>(null);
+  const [editingWhatsAppTeamId, setEditingWhatsAppTeamId] = useState<string | null>(null);
+  const [whatsappLinkDraft, setWhatsappLinkDraft] = useState<Record<string, string>>({});
 
   const toggleTeam = (teamId: string) => {
     const newExpanded = new Set(expandedTeams);
@@ -54,6 +57,30 @@ export function TeamList({ teams, loading, onDeleteTeam, onAddUser, onRemoveUser
       alert('Error al remover el usuario. Por favor intenta de nuevo.');
     } finally {
       setRemovingUserId(null);
+    }
+  };
+
+  const startEditWhatsApp = (teamId: string, currentLink: string | null) => {
+    setEditingWhatsAppTeamId(teamId);
+    setWhatsappLinkDraft((prev) => ({ ...prev, [teamId]: currentLink ?? '' }));
+  };
+
+  const cancelEditWhatsApp = (teamId: string) => {
+    setEditingWhatsAppTeamId((prev) => (prev === teamId ? null : prev));
+    setWhatsappLinkDraft((prev) => {
+      const next = { ...prev };
+      delete next[teamId];
+      return next;
+    });
+  };
+
+  const handleSaveWhatsAppLink = async (teamId: string) => {
+    const link = whatsappLinkDraft[teamId] ?? '';
+    try {
+      await onUpdateWhatsAppLink(teamId, link.trim());
+      cancelEditWhatsApp(teamId);
+    } catch (err: any) {
+      alert(err?.message || 'Error al guardar el enlace de WhatsApp. Por favor intenta de nuevo.');
     }
   };
 
@@ -110,8 +137,72 @@ export function TeamList({ teams, loading, onDeleteTeam, onAddUser, onRemoveUser
                   </div>
                 </div>
 
+                {/* WhatsApp link (admin edit) */}
+                <div className="mt-2">
+                  {editingWhatsAppTeamId === team.id ? (
+                    <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end">
+                      <div className="flex-1 min-w-0">
+                        <label htmlFor={`whatsapp-${team.id}`} className="sr-only">
+                          Enlace de WhatsApp
+                        </label>
+                        <input
+                          id={`whatsapp-${team.id}`}
+                          type="url"
+                          value={whatsappLinkDraft[team.id] ?? ''}
+                          onChange={(e) =>
+                            setWhatsappLinkDraft((prev) => ({ ...prev, [team.id]: e.target.value }))
+                          }
+                          placeholder="https://chat.whatsapp.com/..."
+                          className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-teal focus:outline-none bg-white text-gray-800 min-h-[44px]"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleSaveWhatsAppLink(team.id)}
+                          className="min-h-[44px]"
+                        >
+                          Guardar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => cancelEditWhatsApp(team.id)}
+                          className="min-h-[44px]"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {team.whatsapp_link ? (
+                        <a
+                          href={team.whatsapp_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-teal hover:underline truncate max-w-full"
+                        >
+                          {team.whatsapp_link}
+                        </a>
+                      ) : (
+                        <span className="text-gray-500 text-sm">Sin enlace de WhatsApp</span>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => startEditWhatsApp(team.id, team.whatsapp_link ?? null)}
+                        className="min-h-[44px]"
+                      >
+                        {team.whatsapp_link ? 'Editar enlace' : 'Añadir enlace'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
                 {/* Team Actions */}
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 mt-2">
                   <Button
                     variant="ghost"
                     size="sm"

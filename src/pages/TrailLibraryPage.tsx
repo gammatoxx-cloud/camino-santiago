@@ -11,8 +11,21 @@ import { supabase } from '../lib/supabase';
 export function TrailLibraryPage() {
   const { user } = useAuth();
   const [completedTrails, setCompletedTrails] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Group trails by difficulty
+  // Filter trails by search (name, description, level)
+  const filteredTrails = useMemo(() => {
+    if (!searchQuery.trim()) return trails;
+    const q = searchQuery.toLowerCase().trim();
+    return trails.filter(
+      (t) =>
+        t.name.toLowerCase().includes(q) ||
+        t.description.toLowerCase().includes(q) ||
+        t.level.toLowerCase().includes(q)
+    );
+  }, [searchQuery]);
+
+  // Group filtered trails by difficulty
   const groupedTrails = useMemo(() => {
     const groups: {
       facil: Trail[];
@@ -24,13 +37,13 @@ export function TrailLibraryPage() {
       dificil: [],
     };
 
-    trails.forEach((trail) => {
+    filteredTrails.forEach((trail) => {
       const category = categorizeTrailByDifficulty(trail.level);
       groups[category].push(trail);
     });
 
     return groups;
-  }, []);
+  }, [filteredTrails]);
 
   // Load completed trails from database on mount
   useEffect(() => {
@@ -106,73 +119,132 @@ export function TrailLibraryPage() {
               className="max-w-full h-auto w-1/4"
             />
           </div>
-          <h1 className="text-heading-1 text-teal mb-14 md:mb-16 text-center">
+          <h1 className="text-heading-1 text-teal mb-6 md:mb-8 text-center">
             Senderos para Caminar
           </h1>
 
+          {/* Search bar */}
+          <div className="mb-8 md:mb-10">
+            <label htmlFor="trail-search" className="sr-only">
+              Buscar senderos
+            </label>
+            <div className="relative">
+              <input
+                id="trail-search"
+                type="search"
+                placeholder="Buscar por nombre, descripción o dificultad..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-3 pl-11 rounded-xl border-2 border-gray-200 focus:border-teal focus:outline-none bg-white text-gray-800 placeholder-gray-400 min-h-[48px]"
+                aria-label="Buscar senderos"
+              />
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-teal"
+                  aria-label="Limpiar búsqueda"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            {searchQuery && (
+              <p className="mt-2 text-sm text-gray-600">
+                {filteredTrails.length === 0
+                  ? 'No se encontraron senderos'
+                  : filteredTrails.length === 1
+                    ? '1 sendero encontrado'
+                    : `${filteredTrails.length} senderos encontrados`}
+              </p>
+            )}
+          </div>
+
           <div className="space-y-3 md:space-y-4">
             {/* Fácil Section */}
-            <Accordion
-              title="Fácil"
-              icon="🟢"
-              count={groupedTrails.facil.length}
-              variant="facil"
-              defaultOpen={true}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
-                {groupedTrails.facil.map((trail, index) => (
-                  <TrailCard
-                    key={trail.id}
-                    trail={trail}
-                    index={index}
-                    isCompleted={completedTrails.has(trail.id)}
-                    onToggleCompletion={handleToggleCompletion}
-                  />
-                ))}
-              </div>
-            </Accordion>
+            {(groupedTrails.facil.length > 0 || !searchQuery) && (
+              <Accordion
+                title="Fácil"
+                icon="🟢"
+                count={groupedTrails.facil.length}
+                variant="facil"
+                defaultOpen={!!searchQuery || true}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
+                  {groupedTrails.facil.map((trail, index) => (
+                    <TrailCard
+                      key={trail.id}
+                      trail={trail}
+                      index={index}
+                      isCompleted={completedTrails.has(trail.id)}
+                      onToggleCompletion={handleToggleCompletion}
+                    />
+                  ))}
+                </div>
+              </Accordion>
+            )}
 
             {/* Moderado Section */}
-            <Accordion
-              title="Moderado"
-              icon="🟡"
-              count={groupedTrails.moderado.length}
-              variant="moderado"
-              defaultOpen={false}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
-                {groupedTrails.moderado.map((trail, index) => (
-                  <TrailCard
-                    key={trail.id}
-                    trail={trail}
-                    index={index}
-                    isCompleted={completedTrails.has(trail.id)}
-                    onToggleCompletion={handleToggleCompletion}
-                  />
-                ))}
-              </div>
-            </Accordion>
+            {(groupedTrails.moderado.length > 0 || !searchQuery) && (
+              <Accordion
+                title="Moderado"
+                icon="🟡"
+                count={groupedTrails.moderado.length}
+                variant="moderado"
+                defaultOpen={!!searchQuery}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
+                  {groupedTrails.moderado.map((trail, index) => (
+                    <TrailCard
+                      key={trail.id}
+                      trail={trail}
+                      index={index}
+                      isCompleted={completedTrails.has(trail.id)}
+                      onToggleCompletion={handleToggleCompletion}
+                    />
+                  ))}
+                </div>
+              </Accordion>
+            )}
 
             {/* Difícil Section */}
-            <Accordion
-              title="Difícil"
-              icon="🔴"
-              count={groupedTrails.dificil.length}
-              variant="dificil"
-              defaultOpen={false}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
-                {groupedTrails.dificil.map((trail, index) => (
-                  <TrailCard
-                    key={trail.id}
-                    trail={trail}
-                    index={index}
-                    isCompleted={completedTrails.has(trail.id)}
-                    onToggleCompletion={handleToggleCompletion}
-                  />
-                ))}
-              </div>
-            </Accordion>
+            {(groupedTrails.dificil.length > 0 || !searchQuery) && (
+              <Accordion
+                title="Difícil"
+                icon="🔴"
+                count={groupedTrails.dificil.length}
+                variant="dificil"
+                defaultOpen={!!searchQuery}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
+                  {groupedTrails.dificil.map((trail, index) => (
+                    <TrailCard
+                      key={trail.id}
+                      trail={trail}
+                      index={index}
+                      isCompleted={completedTrails.has(trail.id)}
+                      onToggleCompletion={handleToggleCompletion}
+                    />
+                  ))}
+                </div>
+              </Accordion>
+            )}
           </div>
         </div>
       </div>

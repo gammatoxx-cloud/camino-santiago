@@ -365,6 +365,25 @@ export async function removeUserFromTeam(userId: string, teamId: string): Promis
 }
 
 /**
+ * Update a team's WhatsApp link (admin only)
+ * @param teamId - The team ID to update
+ * @param whatsappLink - The WhatsApp group link (can be empty to clear)
+ */
+export async function adminUpdateTeamWhatsAppLink(teamId: string, whatsappLink: string): Promise<void> {
+  try {
+    const { error } = await (supabase.rpc as any)('admin_update_team_whatsapp_link', {
+      team_id_param: teamId,
+      whatsapp_link_param: whatsappLink ?? '',
+    });
+
+    if (error) throw error;
+  } catch (error: any) {
+    console.error('Error updating team WhatsApp link:', error);
+    throw new Error(error.message || 'Failed to update team WhatsApp link');
+  }
+}
+
+/**
  * Delete a team (admin only)
  * @param teamId - The team ID to delete
  */
