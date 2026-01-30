@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { updateUserPlan, deleteUser } from '../../lib/adminQueries';
 import type { UserWithStats } from '../../lib/adminQueries';
 import type { UserPlan } from '../../types';
+
+const USERS_PER_PAGE = 10;
 
 interface UserListProps {
   users: UserWithStats[];
@@ -24,6 +26,18 @@ export function UserList({ users, loading, onPlanUpdate, onUserDelete }: UserLis
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [confirmDeleteUserId, setConfirmDeleteUserId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(users.length / USERS_PER_PAGE));
+  const startIndex = (currentPage - 1) * USERS_PER_PAGE;
+  const paginatedUsers = users.slice(startIndex, startIndex + USERS_PER_PAGE);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [users.length]);
+
+  const goToPrev = () => setCurrentPage((p) => Math.max(1, p - 1));
+  const goToNext = () => setCurrentPage((p) => Math.min(totalPages, p + 1));
 
   const handlePlanChange = async (userId: string, newPlan: UserPlan) => {
     try {
@@ -89,7 +103,14 @@ export function UserList({ users, loading, onPlanUpdate, onUserDelete }: UserLis
 
   return (
     <Card variant="elevated" className="mb-6">
-      <h2 className="text-2xl font-bold text-teal mb-4">Usuarios ({users.length})</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+        <h2 className="text-2xl font-bold text-teal">Usuarios ({users.length})</h2>
+        {users.length > USERS_PER_PAGE && (
+          <p className="text-sm text-gray-600">
+            Mostrando {startIndex + 1}-{Math.min(startIndex + USERS_PER_PAGE, users.length)} de {users.length}
+          </p>
+        )}
+      </div>
       
       {updateError && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -104,7 +125,7 @@ export function UserList({ users, loading, onPlanUpdate, onUserDelete }: UserLis
       )}
 
       <div className="space-y-3">
-        {users.map((user) => {
+        {paginatedUsers.map((user) => {
           const currentPlan = (user.user_plan || 'gratis') as UserPlan;
           const isUpdating = updatingUserId === user.id;
 
@@ -208,6 +229,34 @@ export function UserList({ users, loading, onPlanUpdate, onUserDelete }: UserLis
           );
         })}
       </div>
+
+      {users.length > USERS_PER_PAGE && (
+        <div className="mt-6 pt-4 border-t border-white/40 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-sm text-gray-600 order-2 sm:order-1">
+            Página {currentPage} de {totalPages}
+          </p>
+          <div className="flex items-center gap-2 order-1 sm:order-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={goToPrev}
+              disabled={currentPage <= 1}
+              className="min-h-[44px]"
+            >
+              Anterior
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={goToNext}
+              disabled={currentPage >= totalPages}
+              className="min-h-[44px]"
+            >
+              Siguiente
+            </Button>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
