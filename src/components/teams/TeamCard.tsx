@@ -1,4 +1,5 @@
 import { Card } from '../ui/Card';
+import { Avatar } from '../ui/Avatar';
 import { TeamWithMembers } from '../../types';
 
 interface TeamCardProps {
@@ -17,13 +18,21 @@ export function TeamCard({ team, currentUserId, onJoin, onLeave, showActions = t
   return (
     <Card variant="elevated" className="mb-4">
       <div className="flex justify-between items-start mb-4">
-        <div className="flex-1">
-          <h3 className="text-xl font-bold text-teal mb-1">
-            {team.name || `Equipo ${team.id.slice(0, 8)}`}
-          </h3>
-          <p className="text-sm text-gray-600">
-            {team.member_count} / {Math.max(team.max_members, 14)} miembros
-          </p>
+        <div className="flex flex-1 flex-col items-start gap-3 min-w-0 sm:flex-row sm:items-center">
+          <Avatar
+            avatarUrl={team.avatar_url}
+            name={team.name || `Equipo ${team.id.slice(0, 8)}`}
+            size="md"
+            className="flex-shrink-0"
+          />
+          <div className="min-w-0">
+            <h3 className="text-xl font-bold text-teal mb-1">
+              {team.name || `Equipo ${team.id.slice(0, 8)}`}
+            </h3>
+            <p className="text-sm text-gray-600">
+              {team.member_count} / {Math.max(team.max_members, 14)} miembros
+            </p>
+          </div>
         </div>
         {showActions && (
           <div>

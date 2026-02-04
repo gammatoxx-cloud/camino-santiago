@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { Avatar } from '../ui/Avatar';
+import { uploadTeamPicture, deleteTeamPicture } from '../../lib/teamImageUpload';
 import type { TeamWithAdminStats } from '../../lib/adminQueries';
 
 interface TeamListProps {
@@ -10,14 +12,18 @@ interface TeamListProps {
   onAddUser: (teamId: string) => void;
   onRemoveUser: (teamId: string, userId: string) => Promise<void>;
   onUpdateWhatsAppLink: (teamId: string, whatsappLink: string) => Promise<void>;
+  onUpdateTeamAvatar: (teamId: string, avatarUrl: string | null) => Promise<void>;
 }
 
-export function TeamList({ teams, loading, onDeleteTeam, onAddUser, onRemoveUser, onUpdateWhatsAppLink }: TeamListProps) {
+export function TeamList({ teams, loading, onDeleteTeam, onAddUser, onRemoveUser, onUpdateWhatsAppLink, onUpdateTeamAvatar }: TeamListProps) {
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
   const [deletingTeamId, setDeletingTeamId] = useState<string | null>(null);
   const [removingUserId, setRemovingUserId] = useState<{ teamId: string; userId: string } | null>(null);
   const [editingWhatsAppTeamId, setEditingWhatsAppTeamId] = useState<string | null>(null);
   const [whatsappLinkDraft, setWhatsappLinkDraft] = useState<Record<string, string>>({});
+  const [uploadingAvatarTeamId, setUploadingAvatarTeamId] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const toggleTeam = (teamId: string) => {
     const newExpanded = new Set(expandedTeams);
@@ -84,6 +90,41 @@ export function TeamList({ teams, loading, onDeleteTeam, onAddUser, onRemoveUser
     }
   };
 
+  const handleAvatarFileChange = async (teamId: string, file: File | null) => {
+    if (!file) return;
+    setAvatarError(null);
+    try {
+      setUploadingAvatarTeamId(teamId);
+      const team = teams.find((t) => t.id === teamId);
+      if (team?.avatar_url) {
+        await deleteTeamPicture(team.avatar_url);
+      }
+      const url = await uploadTeamPicture(teamId, file);
+      await onUpdateTeamAvatar(teamId, url);
+    } catch (err: any) {
+      setAvatarError(err?.message || 'Error al subir la foto. Por favor intenta de nuevo.');
+    } finally {
+      setUploadingAvatarTeamId(null);
+      const input = fileInputRefs.current[teamId];
+      if (input) input.value = '';
+    }
+  };
+
+  const handleRemoveAvatar = async (teamId: string) => {
+    const team = teams.find((t) => t.id === teamId);
+    if (!team?.avatar_url) return;
+    setAvatarError(null);
+    try {
+      setUploadingAvatarTeamId(teamId);
+      await deleteTeamPicture(team.avatar_url);
+      await onUpdateTeamAvatar(teamId, null);
+    } catch (err: any) {
+      setAvatarError(err?.message || 'Error al eliminar la foto. Por favor intenta de nuevo.');
+    } finally {
+      setUploadingAvatarTeamId(null);
+    }
+  };
+
   if (loading) {
     return (
       <Card variant="elevated" className="mb-6">
@@ -116,14 +157,65 @@ export function TeamList({ teams, loading, onDeleteTeam, onAddUser, onRemoveUser
             >
               {/* Team Header */}
               <div className="flex flex-col gap-3">
+                {avatarError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-700 text-sm">{avatarError}</p>
+                  </div>
+                )}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-xl font-bold text-gray-800 truncate">
-                      {team.name || `Equipo ${team.id.slice(0, 8)}`}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      {team.member_count} de {Math.max(team.max_members, 14)} miembros
-                    </p>
+                  <div className="flex flex-1 min-w-0 flex-col items-start gap-3 sm:flex-row sm:items-center">
+                    <Avatar
+                      avatarUrl={team.avatar_url}
+                      name={team.name || `Equipo ${team.id.slice(0, 8)}`}
+                      size="md"
+                      className="flex-shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <h3 className="text-xl font-bold text-gray-800 truncate">
+                        {team.name || `Equipo ${team.id.slice(0, 8)}`}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {team.member_count} de {Math.max(team.max_members, 14)} miembros
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/webp"
+                          className="hidden"
+                          ref={(el) => {
+                            fileInputRefs.current[team.id] = el;
+                          }}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleAvatarFileChange(team.id, f);
+                          }}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => fileInputRefs.current[team.id]?.click()}
+                          disabled={uploadingAvatarTeamId === team.id}
+                          className="min-h-[44px]"
+                        >
+                          {uploadingAvatarTeamId === team.id
+                            ? 'Subiendo...'
+                            : team.avatar_url
+                              ? 'Cambiar foto'
+                              : 'Subir foto'}
+                        </Button>
+                        {team.avatar_url && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveAvatar(team.id)}
+                            disabled={uploadingAvatarTeamId === team.id}
+                            className="min-h-[44px] text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            Eliminar foto
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 flex-shrink-0">
                     <div className="text-right sm:text-left">

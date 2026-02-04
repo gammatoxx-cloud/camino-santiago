@@ -10,6 +10,7 @@ import {
   removeUserFromTeam,
   deleteTeam,
   adminUpdateTeamWhatsAppLink,
+  adminUpdateTeamAvatar,
   type UserWithStats,
   type TeamWithAdminStats,
 } from '../lib/adminQueries';
@@ -96,6 +97,16 @@ export function AdminPage() {
   const handleUpdateTeamWhatsAppLink = async (teamId: string, whatsappLink: string) => {
     try {
       await adminUpdateTeamWhatsAppLink(teamId, whatsappLink);
+      const teamsData = await getAllTeamsWithStats();
+      setTeams(teamsData);
+    } catch (err: any) {
+      throw err; // Let TeamList handle the error display
+    }
+  };
+
+  const handleUpdateTeamAvatar = async (teamId: string, avatarUrl: string | null) => {
+    try {
+      await adminUpdateTeamAvatar(teamId, avatarUrl);
       const teamsData = await getAllTeamsWithStats();
       setTeams(teamsData);
     } catch (err: any) {
@@ -205,6 +216,7 @@ export function AdminPage() {
           onAddUser={handleAddUser}
           onRemoveUser={handleRemoveUser}
           onUpdateWhatsAppLink={handleUpdateTeamWhatsAppLink}
+          onUpdateTeamAvatar={handleUpdateTeamAvatar}
         />
 
         {/* Add User Modal */}

@@ -135,6 +135,8 @@ export interface Database {
           name: string | null
           created_by: string
           max_members: number
+          whatsapp_link: string | null
+          avatar_url: string | null
           created_at: string
           updated_at: string
         }
@@ -143,6 +145,8 @@ export interface Database {
           name?: string | null
           created_by: string
           max_members?: number
+          whatsapp_link?: string | null
+          avatar_url?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -151,6 +155,8 @@ export interface Database {
           name?: string | null
           created_by?: string
           max_members?: number
+          whatsapp_link?: string | null
+          avatar_url?: string | null
           created_at?: string
           updated_at?: string
         }

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { Avatar } from '../ui/Avatar';
 import type { TeamWithMembers, TeamInvitationWithDetails } from '../../types';
 
 interface DashboardTeamCardProps {
@@ -48,9 +49,17 @@ export function DashboardTeamCard({
       {userTeam ? (
         <div>
           <div className="p-5 md:p-6 rounded-2xl bg-gradient-to-br from-white/70 via-white/50 to-rose/5 border border-teal/15">
-            <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-3">
-              {userTeam.name || `Equipo ${userTeam.id.slice(0, 8)}`}
-            </h3>
+            <div className="flex flex-col items-start gap-3 mb-3 sm:flex-row sm:items-center">
+              <Avatar
+                avatarUrl={userTeam.avatar_url}
+                name={userTeam.name || `Equipo ${userTeam.id.slice(0, 8)}`}
+                size="md"
+                className="flex-shrink-0"
+              />
+              <h3 className="text-lg md:text-xl font-bold text-gray-800">
+                {userTeam.name || `Equipo ${userTeam.id.slice(0, 8)}`}
+              </h3>
+            </div>
             <div className="flex items-center gap-2 text-sm md:text-base text-gray-600 mb-4">
               <span className="font-semibold">
                 {userTeam.member_count}/{Math.max(userTeam.max_members, 14)} miembros

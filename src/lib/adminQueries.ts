@@ -384,6 +384,25 @@ export async function adminUpdateTeamWhatsAppLink(teamId: string, whatsappLink: 
 }
 
 /**
+ * Update a team's avatar URL (admin only)
+ * @param teamId - The team ID to update
+ * @param avatarUrl - The avatar URL (or null/empty to clear)
+ */
+export async function adminUpdateTeamAvatar(teamId: string, avatarUrl: string | null): Promise<void> {
+  try {
+    const { error } = await (supabase.rpc as any)('admin_update_team_avatar', {
+      team_id_param: teamId,
+      avatar_url_param: avatarUrl ?? '',
+    });
+
+    if (error) throw error;
+  } catch (error: any) {
+    console.error('Error updating team avatar:', error);
+    throw new Error(error.message || 'Failed to update team avatar');
+  }
+}
+
+/**
  * Delete a team (admin only)
  * @param teamId - The team ID to delete
  */

@@ -70,6 +70,7 @@ export interface Team {
   created_by: string;
   max_members: number;
   whatsapp_link: string | null;
+  avatar_url: string | null;
   created_at: string;
   updated_at: string;
 }

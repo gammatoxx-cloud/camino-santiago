@@ -1290,16 +1290,24 @@ export function TeamPage() {
                       key={team.id}
                       className="p-4 bg-white/60 rounded-lg border border-gray-200"
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h3 className="text-xl font-bold text-teal mb-1">
-                            {team.name || `Equipo ${team.id.slice(0, 8)}`}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            {team.member_count} de {Math.max(team.max_members, 14)} miembros
-                          </p>
+                      <div className="flex flex-col gap-3 mb-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex flex-1 flex-col items-start gap-3 min-w-0 sm:flex-row sm:items-center">
+                          <Avatar
+                            avatarUrl={team.avatar_url}
+                            name={team.name || `Equipo ${team.id.slice(0, 8)}`}
+                            size="md"
+                            className="flex-shrink-0"
+                          />
+                          <div className="min-w-0 w-full sm:w-auto">
+                            <h3 className="text-xl font-bold text-teal mb-1">
+                              {team.name || `Equipo ${team.id.slice(0, 8)}`}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              {team.member_count} de {Math.max(team.max_members, 14)} miembros
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2 sm:flex-shrink-0">
                           {leader && (
                             <span className="px-2 py-1 bg-teal/10 text-teal rounded-full text-xs font-semibold whitespace-nowrap">
                               👑 Líder: {leader.profile?.name || 'Desconocido'}
