@@ -302,7 +302,7 @@ export async function addUserToTeam(userId: string, teamId: string): Promise<voi
     if (teamError) throw teamError;
     if (!team) throw new Error('Team not found');
 
-    const teamData = team as { max_members: number };
+    const teamData = team as { max_members: number | null };
 
     // Check current member count
     const { data: members, error: membersError } = await supabase
@@ -312,7 +312,7 @@ export async function addUserToTeam(userId: string, teamId: string): Promise<voi
 
     if (membersError) throw membersError;
 
-    if ((members?.length || 0) >= teamData.max_members) {
+    if (teamData.max_members != null && (members?.length || 0) >= teamData.max_members) {
       throw new Error('Team is full');
     }
 

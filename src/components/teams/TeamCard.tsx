@@ -12,8 +12,7 @@ interface TeamCardProps {
 
 export function TeamCard({ team, currentUserId, onJoin, onLeave, showActions = true }: TeamCardProps) {
   const isMember = team.members.some(m => m.user_id === currentUserId);
-  const maxMembers = Math.max(team.max_members, 14);
-  const isFull = team.member_count >= maxMembers;
+  const isFull = team.max_members != null && team.member_count >= team.max_members;
 
   return (
     <Card variant="elevated" className="mb-4">
@@ -30,7 +29,7 @@ export function TeamCard({ team, currentUserId, onJoin, onLeave, showActions = t
               {team.name || `Equipo ${team.id.slice(0, 8)}`}
             </h3>
             <p className="text-sm text-gray-600">
-              {team.member_count} / {Math.max(team.max_members, 14)} miembros
+              {team.member_count}{team.max_members != null ? ` / ${team.max_members}` : ''} miembros
             </p>
           </div>
         </div>

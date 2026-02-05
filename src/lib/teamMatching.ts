@@ -253,8 +253,9 @@ export async function findAvailableTeams(
       const memberCount = members.length;
       const isUserMember = members.some(m => m.user_id === userId);
 
-      // Check if team has open spots and user is not already a member
-      if (memberCount < team.max_members && !isUserMember) {
+      // Check if team has open spots (or no limit) and user is not already a member
+      const hasSpace = team.max_members == null || memberCount < team.max_members;
+      if (hasSpace && !isUserMember) {
         // Check if at least one member is in the nearby users list
         const hasNearbyMember = members.some(m => nearbyUserIds.includes(m.user_id));
 
@@ -451,14 +452,14 @@ export async function getTeamMembersByTeamId(teamId: string): Promise<(TeamMembe
  * Create a new team
  * @param userId - The user creating the team
  * @param teamName - Optional team name
- * @param maxMembers - Maximum team members (default: 14)
+ * @param maxMembers - Maximum team members (null = no limit)
  * @param whatsappLink - Optional WhatsApp group link
  * @returns Created team
  */
 export async function createTeam(
   userId: string,
   teamName?: string,
-  maxMembers: number = 14,
+  maxMembers: number | null = null,
   whatsappLink?: string
 ): Promise<TeamWithMembers> {
   try {
@@ -741,7 +742,8 @@ export async function joinTeam(userId: string, teamId: string): Promise<TeamWith
 
     if (membersError) throw membersError;
 
-    if ((members || []).length >= (team as Team).max_members) {
+    const maxMembers = (team as Team).max_members;
+    if (maxMembers != null && (members || []).length >= maxMembers) {
       throw new Error('Team is full');
     }
 
@@ -947,7 +949,8 @@ export async function sendTeamInvitation(
       .select('id')
       .eq('team_id', teamId);
 
-    if ((members || []).length >= (team as Team).max_members) {
+    const maxMembers = (team as Team).max_members;
+    if (maxMembers != null && (members || []).length >= maxMembers) {
       throw new Error('Team is full');
     }
 
@@ -1193,7 +1196,8 @@ export async function createJoinRequest(
       .select('id')
       .eq('team_id', teamId);
 
-    if ((members || []).length >= (team as Team).max_members) {
+    const maxMembers = (team as Team).max_members;
+    if (maxMembers != null && (members || []).length >= maxMembers) {
       throw new Error('El equipo está lleno');
     }
 
@@ -1344,7 +1348,8 @@ export async function acceptJoinRequest(
       .select('id')
       .eq('team_id', teamId);
 
-    if ((members || []).length >= (team as Team).max_members) {
+    const maxMembers = (team as Team).max_members;
+    if (maxMembers != null && (members || []).length >= maxMembers) {
       // Update request status to declined since team is full
       await (supabase
         .from('team_join_requests')

@@ -260,7 +260,7 @@ export function TeamPage() {
       await createTeam(
         user.id, 
         newTeamName.trim() || undefined, 
-        14,
+        null, // no limit
         newTeamWhatsAppLink.trim() || undefined
       );
       // Refresh all teams
@@ -637,7 +637,7 @@ export function TeamPage() {
                           {teamMembers.length > 0 && (
                             <div className="mt-3">
                               <p className="text-sm font-medium text-gray-700 mb-2">
-                                Miembros del equipo ({teamMembers.length} de {invitation.team ? Math.max(invitation.team.max_members, 14) : 'N/A'}):
+                                Miembros del equipo ({teamMembers.length}{invitation.team?.max_members != null ? ` de ${invitation.team.max_members}` : ''}):
                               </p>
                               <div className="flex flex-wrap gap-2">
                                 {teamMembers.map((member) => (
@@ -835,7 +835,7 @@ export function TeamPage() {
                           </div>
                         )}
                         <p className="text-gray-600">
-                          {team.member_count} de {Math.max(team.max_members, 14)} miembros
+                          {team.member_count}{team.max_members != null ? ` de ${team.max_members}` : ''} miembros
                         </p>
                         
                         {/* WhatsApp Link Section */}
@@ -973,7 +973,7 @@ export function TeamPage() {
                   </Card>
 
                   {/* Nearby Users Card - Show when user has a team and can invite others */}
-                  {isLeader && team.member_count < Math.max(team.max_members, 14) && (
+                  {isLeader && (team.max_members == null || team.member_count < team.max_members) && (
                     <Card variant="elevated">
                       <div className="flex items-center justify-between mb-4">
                         <div>
@@ -1115,7 +1115,7 @@ export function TeamPage() {
                                     <p className="text-sm font-medium text-teal whitespace-nowrap">
                                       A {nearbyUser.distance_miles.toFixed(1)} millas
                                     </p>
-                                    {team.member_count < team.max_members && (
+                                    {(team.max_members == null || team.member_count < team.max_members) && (
                                       <Button
                                         variant="primary"
                                         size="sm"
@@ -1282,7 +1282,7 @@ export function TeamPage() {
                   const hasPendingRequest = userJoinRequests.some(
                     req => req.team_id === team.id && req.status === 'pending'
                   );
-                  const canJoin = !isUserMember && team.member_count < Math.max(team.max_members, 14);
+                  const canJoin = !isUserMember && (team.max_members == null || team.member_count < team.max_members);
                   const leader = team.members.find(m => m.role === 'leader');
                   
                   return (
@@ -1303,7 +1303,7 @@ export function TeamPage() {
                               {team.name || `Equipo ${team.id.slice(0, 8)}`}
                             </h3>
                             <p className="text-sm text-gray-600">
-                              {team.member_count} de {Math.max(team.max_members, 14)} miembros
+                              {team.member_count}{team.max_members != null ? ` de ${team.max_members}` : ''} miembros
                             </p>
                           </div>
                         </div>

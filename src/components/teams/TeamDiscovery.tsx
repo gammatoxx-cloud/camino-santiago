@@ -95,9 +95,7 @@ export function TeamDiscovery({
                     .slice((nearbyUsersPage - 1) * usersPerPage, nearbyUsersPage * usersPerPage)
                     .map((user) => {
                       const isTeamLeader = user.is_team_leader === true;
-                      const hasSpace = user.team_max_members && user.team_id
-                        ? !pendingJoinRequestTeamIds.includes(user.team_id)
-                        : false;
+                      const hasSpace = user.team_id != null && !pendingJoinRequestTeamIds.includes(user.team_id);
                       const canRequestJoin = isTeamLeader && hasSpace && onRequestJoin && user.team_id;
 
                       return (

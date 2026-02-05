@@ -99,7 +99,7 @@ export function TeamMemberList({ team, currentUserId }: TeamMemberListProps) {
       </div>
       <div className="mt-6 pt-4 border-t border-gray-200/50">
         <p className="text-sm font-medium text-gray-600 text-center">
-          {team.member_count} de {Math.max(team.max_members, 14)} miembros
+          {team.member_count}{team.max_members != null ? ` de ${team.max_members}` : ''} miembros
         </p>
       </div>
     </div>

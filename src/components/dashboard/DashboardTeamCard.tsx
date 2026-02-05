@@ -62,7 +62,7 @@ export function DashboardTeamCard({
             </div>
             <div className="flex items-center gap-2 text-sm md:text-base text-gray-600 mb-4">
               <span className="font-semibold">
-                {userTeam.member_count}/{Math.max(userTeam.max_members, 14)} miembros
+                {userTeam.member_count}{userTeam.max_members != null ? `/${userTeam.max_members}` : ''} miembros
               </span>
               {userTeam.created_by === currentUserId && (
                 <span className="px-3 py-1 bg-teal/20 text-teal text-xs rounded-full font-medium">
